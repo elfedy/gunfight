@@ -2,6 +2,7 @@
 Cargo.lock
 
 /build
+/node_modules
 
 .DS_Store
 
