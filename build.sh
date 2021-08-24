@@ -10,5 +10,5 @@ echo Starting build...
 rm -rf build
 mkdir -p build
 
-./build_assets.sh
+./build_web.sh
 ./build_wasm.sh

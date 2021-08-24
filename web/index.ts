@@ -29,13 +29,26 @@ function consoleLogUtf8(start, offset) {
 }
 
 function run(wasm) {
-  wasm.instance.exports.write_vertices();
-  let pointer = wasm.instance.exports.buffer_pointer();
-  let arr = wasmMemoryBuffer.subarray(pointer, pointer + 6 * 4);
-  let buffer_slice = wasmMemory.buffer.slice(pointer, pointer + 6 * 4);
-  let float32_buffer = new Float32Array(buffer_slice);
+  wasm.instance.exports.game_update_and_render();
 
-  //console.log(wasmMemoryBuffer[pointer]);
+  let colorShaderEntitiesCount = wasm.instance.exports.color_shader_entities_count();
+
+  let verticesPointer = wasm.instance.exports.color_shader_vertices_pointer();
+  // NOTE: Asumes squared entites which involves 6 pairs of vertices of 4 bytes each (float32)
+  let verticesSlice = 
+    wasmMemory.buffer.slice(
+      verticesPointer,
+      verticesPointer + colorShaderEntitiesCount * 6 * 2 * 4
+    );
+  let verticesBuffer = new Float32Array(verticesSlice);
+
+  let colorsPointer = wasm.instance.exports.color_shader_colors_pointer();
+  let colorsSlice = 
+    wasmMemory.buffer.slice(
+      colorsPointer,
+      colorsPointer + colorShaderEntitiesCount * 4 * 4 // 4 float32s per color
+    );
+  let colorsBuffer = new Float32Array(colorsSlice);
 
   // Initialize web gl
   let canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -56,16 +69,6 @@ function run(wasm) {
   gl.useProgram(colorShaderInfo.program);
   gl.bindBuffer(gl.ARRAY_BUFFER, colorShaderInfo.buffers.aPosition);
 
-  /*
-  gl.vertexAttribPointer(
-    colorShaderInfo.locations.aPosition,
-    2,  // size: components per iteration
-    gl.FLOAT,  // data type
-    false, // normalize
-    0, // stride: bytes between beggining of consecutive vetex attributes in buffer
-    0 // offset: where to start reading data from the buffer
-  );
-  */
   gl.vertexAttribPointer(
     colorShaderInfo.locations.aPosition,
     2,  // size: components per iteration
@@ -84,17 +87,29 @@ function run(wasm) {
   gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrix);
 
 
-  let color = {r: 1, g: 0, b: 0, alpha: 1.0};
-  let colorArray = [color.r, color.g, color.b, color.alpha]
-  gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);
-
   // Add vertices to array buffer
-  // TODO: this should work in theory
-  console.log(arr);
-  gl.bufferData(gl.ARRAY_BUFFER, float32_buffer, gl.STATIC_DRAW);
+  gl.bufferData(gl.ARRAY_BUFFER, verticesBuffer, gl.STATIC_DRAW);
+  console.log(verticesBuffer);
 
-  let offset = 0;
-  let count = 3;
-  gl.drawArrays(gl.TRIANGLES, offset, count);
+  console.log(colorsBuffer);
+  // TODO: multiple rectangles not working
+  for(let i = 0; i < colorShaderEntitiesCount; i++) {
+    /*
+    let colorArray = [
+      colorsBuffer[4 * i],
+      colorsBuffer[4 * i + 1],
+      colorsBuffer[4 * i + 2],
+      colorsBuffer[4 * i + 3],
+    ]
+    */
+    let colorArray = colorsBuffer.slice(4 * i, 4 * i + 4);
+    console.log(colorArray);
+    gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);
+
+
+    let offset = 6 * i;
+    let count = 6;
+    gl.drawArrays(gl.TRIANGLES, offset, count);
+  }
 
 }
