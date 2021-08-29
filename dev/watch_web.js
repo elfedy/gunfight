@@ -1,13 +1,16 @@
 const	fsevents = require('fsevents');
 const { exec } = require('child_process');
 
-console.log("Started watching ./web");
+let dir = './web';
+let command = './build_web.sh';
+
+console.log(`Started watching ./dir`);
+
 const stop = fsevents.watch('./web', (path, flags, id) => {
   const info = fsevents.getInfo(path, flags, id);
   if(info.event === 'moved') {
     console.log(`Detected change in ${info.path}.`);
-    /*
-    exec('./build_web.sh', (error, stdout, stderr) => {
+    exec(command, (error, stdout, stderr) => {
       console.log(stdout);
       if(error) {
         console.log(`error: ${error.message}`);
@@ -16,6 +19,5 @@ const stop = fsevents.watch('./web', (path, flags, id) => {
         console.log(`stderr: ${stderr}`);
       }
     })
-    */
   }
-})
+});

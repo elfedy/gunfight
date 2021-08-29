@@ -9,6 +9,8 @@ WebAssembly.instantiateStreaming(
 
       console_log_bytes: consoleLogBytes,
       console_log_utf8: consoleLogUtf8,
+      get_canvas_width: getCanvasWidth,
+      get_canvas_height: getCanvasHeight,
     }
   }
 ).then(wasm => {
@@ -16,6 +18,7 @@ WebAssembly.instantiateStreaming(
   run(wasm);
 });
 
+// WASM IMPORTS
 function consoleLogBytes(start, offset) {
   console.log(start);
   let arr = wasmMemoryBuffer.subarray( start, start + offset);
@@ -28,13 +31,27 @@ function consoleLogUtf8(start, offset) {
   console.log(decoder.decode(arr));
 }
 
-function run(wasm) {
-  wasm.instance.exports.game_update_and_render();
+function getCanvasWidth() {
+  let canvas = <HTMLCanvasElement> document.getElementById('canvas');
+  return canvas.width;
+}
 
+function getCanvasHeight() {
+  let canvas = <HTMLCanvasElement> document.getElementById('canvas');
+  return canvas.height;
+}
+
+// RUN
+function run(wasm) {
+  let canvas = <HTMLCanvasElement> document.getElementById('canvas');
+
+  let dims = new Uint32Array([canvas.width, canvas.height]);
+  wasm.instance.exports.game_update_and_render();
   let colorShaderEntitiesCount = wasm.instance.exports.color_shader_entities_count();
 
   let verticesPointer = wasm.instance.exports.color_shader_vertices_pointer();
   // NOTE: Asumes squared entites which involves 6 pairs of vertices of 4 bytes each (float32)
+  // hello
   let verticesSlice = 
     wasmMemory.buffer.slice(
       verticesPointer,
@@ -51,7 +68,6 @@ function run(wasm) {
   let colorsBuffer = new Float32Array(colorsSlice);
 
   // Initialize web gl
-  let canvas = <HTMLCanvasElement> document.getElementById('canvas');
   let gl = canvas.getContext('webgl');
   if(gl === null) {
     alert("Unable to initialize WebGL. Your browser or machine may not support it.");
