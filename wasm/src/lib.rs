@@ -33,6 +33,14 @@ static mut COLOR_SHADER_COLORS_ARENA: MemoryArena = MemoryArena {
 };
 
 
+static mut GAME_STATE: GameState = GameState {
+    player_x: 0.0,
+    player_y: 0.0,
+    is_initialized: false,
+    t_last_frame: 0.0,
+};
+
+
 // TYPES
 struct GameCanvas {
     width: f32,
@@ -52,22 +60,73 @@ struct Color {
     a: f32,
 }
 
+struct GameState {
+    is_initialized: bool,
+
+    t_last_frame: f64, // DOMHighResTimestamp is a double
+
+    player_x: f32,
+    player_y: f32,
+}
+
+struct Keyboard {
+    key_a: bool,
+    key_s: bool,
+
+    key_up: bool,
+    key_down: bool,
+    key_right: bool,
+    key_left: bool,
+}
+
+
 // EXPORTS
 #[no_mangle]
- pub extern "C" fn game_update_and_render() {
+ pub extern "C" fn game_update_and_render(t_frame: f64) {
     unsafe {
+        // clear memory arenas that contain draw data for each frame
+        reset_arena(&mut COLOR_SHADER_VERTICES_ARENA);
+        reset_arena(&mut COLOR_SHADER_COLORS_ARENA);
+
         let canvas = GameCanvas {
             width: get_canvas_width(),
             height: get_canvas_height(),
         };
+
+        if !GAME_STATE.is_initialized {
+            GAME_STATE.is_initialized = true;
+            GAME_STATE.player_x = 1.0;
+            GAME_STATE.player_y = 0.1;
+            GAME_STATE.t_last_frame = t_frame;
+        }
+
+        let dt: f64 = t_frame - GAME_STATE.t_last_frame;
+        GAME_STATE.t_last_frame = t_frame;
+
+        //console_log_bytes(t_frame.to_be_bytes().as_ptr(), 8);
+
         draw_rectangle(0.0, 0.0, canvas.width, canvas.height, Color{ r: 1.0, g: 0.0, b: 1.0, a: 1.0});
 
-        draw_rectangle(100.0, 100.0, 200.0, 200.0, Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0} );
-        draw_rectangle(400.0, 300.0, 500.0, 400.0, Color { r: 1.0, g: 1.0, b: 0.0, a: 1.0} );
-        draw_rectangle(200.0, 200.0, 300.0, 300.0, Color { r: 0.0, g: 1.0, b: 1.0, a: 1.0} );
-        draw_rectangle(500.0, 500.0, 600.0, 600.0, Color { r: 1.0, g: 0.0, b: 1.0, a: 1.0} );
+        // Draw player
+        let player_width_meters: f32 = 0.9;
+        let player_height_meters: f32 = 1.8;
+
+        let pixels_per_meter: f32 = 30.0;
+        let player_width_pixels = player_width_meters * pixels_per_meter;
+        let player_height_pixels = player_height_meters * pixels_per_meter;
+
+        let canvas_player_x = GAME_STATE.player_x * pixels_per_meter;
+        let canvas_player_y = canvas.height - GAME_STATE.player_y * pixels_per_meter;
+        draw_rectangle(
+            canvas_player_x - (player_width_pixels / 2.0),
+            canvas_player_y - player_height_pixels,
+            canvas_player_x + (player_width_pixels / 2.0),
+            canvas_player_y,
+            Color { r: 0.8, g: 0.6, b: 0.2, a: 1.0}
+        );
     }
 }
+
 
 #[no_mangle]
 pub extern "C" fn color_shader_vertices_pointer() -> *const u8 {
@@ -135,11 +194,15 @@ unsafe fn push_byte_to_buffer(arena: &mut MemoryArena, byte: u8) {
 fn push_f32_to_buffer(arena: &mut MemoryArena, value: f32) {
     // TODO: Check endianess of the machine somehow and convert accordingly
     // DataView does not seem to work if passing the full array
-    let bytes = value.to_le_bytes();
+    let bytes = value.to_ne_bytes();
     for byte in bytes.iter() {
         unsafe {
             push_byte_to_buffer(arena, *byte);
         }
     }
+}
+
+fn reset_arena(arena: &mut MemoryArena) {
+    arena.current_pos = 0;
 }
 
