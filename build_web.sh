@@ -3,15 +3,7 @@
 set -e
 set -o pipefail
 
-# TODO(Fede): check for typescript version and give an error
-# if it is incorrect.
-if command -v tsc >/dev/null 2>&1; then
-  echo Typescript is already installed.
-else
-  echo Did not find Typescript
-  echo Installing...
-  npm install -g typescript
-fi
+echo building web...
 
 tsFiles='
   web/math.ts
@@ -22,3 +14,5 @@ tsFiles='
 tsc $tsFiles --outFile build/index.js --lib dom,es2015
 
 cp ./web/index.html ./build/index.html
+
+echo OK

@@ -5,6 +5,6 @@ set -o pipefail
 
 echo building wasm files...
 cd ./wasm
-cargo build --target wasm32-unknown-unknown --release
+clang --target=wasm32 -nostdlib -Wl,--no-entry -Wl,--export-all -Wl,--import-memory -o ../build/gunfight.wasm gunfight.cpp
 cd ../
-cp ./wasm/target/wasm32-unknown-unknown/release/gunf.wasm ./build/gunfight.wasm
+echo OK

@@ -1,13 +1,15 @@
-const	fsevents = require('fsevents');
+const	chokidar = require('chokidar');
 const { exec } = require('child_process');
 
-console.log("Started watching ./wasm");
-const stop = fsevents.watch('./wasm', (path, flags, id) => {
-  const info = fsevents.getInfo(path, flags, id);
-  if(info.event === 'moved') {
-    console.log(`Detected change in ${info.path}.`);
+let dir = './wasm';
+let command = './build_wasm.sh';
+
+console.log(`Started watching ${dir}`);
+
+chokidar.watch(dir).on('change', path => {
+    console.log(`Detected change in ${path}.`);
     try {
-      exec('./build_wasm.sh', (error, stdout, stderr) => {
+      exec(command, (error, stdout, stderr) => {
         console.log(stdout);
         if(error) {
           console.log(`error: ${error.message}`);
@@ -20,4 +22,4 @@ const stop = fsevents.watch('./wasm', (path, flags, id) => {
       console.log(`FAILED: ${e}`);
     }
   }
-})
+);
