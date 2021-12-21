@@ -1,5 +1,4 @@
 // NOTE(fede): 1 page = 64 KB
-// Rust asks for 16 pages (1 MB) of memory for the stack by default
 let wasmMemory = new WebAssembly.Memory({initial: 160, maximum: 160});
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
 
@@ -9,8 +8,9 @@ WebAssembly.instantiateStreaming(
     env: {
       memory: wasmMemory,
 
-      console_log_bytes: consoleLogBytes,
-      console_log_utf8: consoleLogUtf8,
+      logBytes: consoleLogBytes,
+      logUtf8: consoleLogUtf8,
+      logFloat32: (f32) => console.log(f32),
       console_log_pointer: (ptr) => console.log(ptr),
       console_log_usize: (val) => console.log(val),
       get_canvas_width: getCanvasWidth,
@@ -22,13 +22,10 @@ WebAssembly.instantiateStreaming(
 });
 
 function main(wasm) {
-  let heapBase = wasm.instance.exports.getHeapBase();
   //window.requestAnimationFrame(run(wasm));
   let timestamp = 0;
-  console.log(heapBase);
   // TODO: draw the triangle
   let canvas = <HTMLCanvasElement> document.getElementById('canvas');
-
 
   /*
   let colorsPointer = wasm.instance.exports.color_shader_colors_pointer();
@@ -49,57 +46,61 @@ function main(wasm) {
 
   // Setup Shaders
   let colorShaderInfo = colorShaderSetup(gl);
-  gl.clearColor(0.9, 0.9, 0.9, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
 
   // UPDATE AND RENDER
-  wasm.instance.exports.updateAndRender(timestamp); 
-    
-  // Tell WebGL how to convert from clip space to pixels
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-  gl.useProgram(colorShaderInfo.program);
-
-  // Enable vertex attribute
-  gl.enableVertexAttribArray(colorShaderInfo.locations.aPosition);
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, colorShaderInfo.buffers.aPosition);
-
-  // Specify how to pull the data from the buffer
-  gl.vertexAttribPointer(
-    colorShaderInfo.locations.aPosition,
-    2,  // size: components per iteration
-    gl.FLOAT,  // data type
-    false, // normalize
-    0, // stride: bytes between beggining of consecutive vetex attributes in buffer
-    0 // offset: where to start reading data from the buffer
-  );
-
-  let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
-  gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrixProjection);
-
-  // Add vertices to array buffer
-  let verticesSlice = 
-    wasmMemory.buffer.slice(
-      heapBase,
-      heapBase + 3 * 2 * 4 // three vertices, two f32 coordinates
-    );
-  let verticesBuffer = new Float32Array(verticesSlice);
-  gl.bufferData(gl.ARRAY_BUFFER, verticesBuffer, gl.STATIC_DRAW);
-
-  let colorArray = new Float32Array([1.0, 1.0, 0, 1.0]);
-  gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);
-
-  let offset = 0;
-  let count = 3;
-  gl.drawArrays(gl.TRIANGLES, offset, count);
+  window.requestAnimationFrame(run(wasm, gl, colorShaderInfo));
 }
 
-function run(wasm) {
+function run(wasm, gl, colorShaderInfo) {
   return (timestamp) => {
-    window.requestAnimationFrame(run(wasm));
     wasm.instance.exports.updateAndRender(timestamp); 
-    let triangleBase = wasm.instance.exports.getHeapBase();
+
+    gl.clearColor(0.9, 0.9, 0.9, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+      
+    // Tell WebGL how to convert from clip space to pixels
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    gl.useProgram(colorShaderInfo.program);
+
+    // Enable vertex attribute
+    gl.enableVertexAttribArray(colorShaderInfo.locations.aPosition);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorShaderInfo.buffers.aPosition);
+
+    // Specify how to pull the data from the buffer
+    gl.vertexAttribPointer(
+      colorShaderInfo.locations.aPosition,
+      2,  // size: components per iteration
+      gl.FLOAT,  // data type
+      false, // normalize
+      0, // stride: bytes between beggining of consecutive vetex attributes in buffer
+      0 // offset: where to start reading data from the buffer
+    );
+
+    let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
+    gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrixProjection);
+
+    let numberOfVertices = 6;
+    let pointsPerVertex = 2;
+    let bytesPerFloat32 = 4;
+    // Add vertices to array buffer
+    let heapBase = wasm.instance.exports.getHeapBase();
+    let verticesSlice = 
+      wasmMemory.buffer.slice(
+        heapBase,
+        heapBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
+      );
+    let verticesBuffer = new Float32Array(verticesSlice);
+    gl.bufferData(gl.ARRAY_BUFFER, verticesBuffer, gl.STATIC_DRAW);
+
+    let colorArray = new Float32Array([1.0, 1.0, 0, 1.0]);
+    gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);
+
+    let offset = 0;
+    let count = numberOfVertices;
+    gl.drawArrays(gl.TRIANGLES, offset, count);
+    window.requestAnimationFrame(run(wasm, gl, colorShaderInfo));
   }
 }
 
