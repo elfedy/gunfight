@@ -85,14 +85,16 @@ function run(wasm, gl, colorShaderInfo) {
     let pointsPerVertex = 2;
     let bytesPerFloat32 = 4;
     // Add vertices to array buffer
-    let heapBase = wasm.instance.exports.getHeapBase();
+    let bufferBase = wasm.instance.exports.getBufferBase();
     let verticesSlice = 
       wasmMemory.buffer.slice(
-        heapBase,
-        heapBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
+        bufferBase,
+        bufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
       );
     let verticesBuffer = new Float32Array(verticesSlice);
     gl.bufferData(gl.ARRAY_BUFFER, verticesBuffer, gl.STATIC_DRAW);
+    console.log(bufferBase);
+    console.log(verticesBuffer);
 
     let colorArray = new Float32Array([1.0, 1.0, 0, 1.0]);
     gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);

@@ -14,13 +14,14 @@ typedef long bool32;
 
 #define arrayLength(A) sizeof(A)/sizeof(A[0])
 
+#define kilobytes(value) ((value)*1024LL)
+#define megabytes(value) (kilobytes(value)*1024LL)
+#define gigabytes(value) (megabytes(value)*1024LL)
 
-u8 __heap_base;
+// ENV IMPORTS
 void logFloat32(f32 val);
 
-export u8 *getHeapBase() {
-  return &__heap_base;
-}
+extern u8 __heap_base;
 
 internal void drawRectangle(f32 *verticesBuffer, f32 minX, f32 minY, f32 maxX, f32 maxY) {
   f32 vertices[12] = {
@@ -32,7 +33,7 @@ internal void drawRectangle(f32 *verticesBuffer, f32 minX, f32 minY, f32 maxX, f
     maxX, maxY,
   };
 
-  for(int i; i < arrayLength(vertices); i++) {
+  for(int i = 0; i < arrayLength(vertices); i++) {
     *verticesBuffer++ = vertices[i];
   }
 }
@@ -45,6 +46,10 @@ typedef struct Position {
 global_variable Position POSITION_IN_METERS;
 global_variable bool32 IS_INITIALIZED = 0;
 global_variable f64 LAST_TIMESTAMP;
+
+export u8 *getBufferBase() {
+    return &__heap_base;
+}
 
 export void updateAndRender(f64 timestamp) {
   //TODO(fede): This values should be more dynamic. Also how to achieve this while
@@ -67,25 +72,27 @@ export void updateAndRender(f64 timestamp) {
     IS_INITIALIZED = 1;
   }
 
-  int triangleBaseOffset = 0;
-  f32 *triangleBase = (f32 *) (getHeapBase() + triangleBaseOffset);
-
-  f32 vx = 2.0f; // meters per second
+  f32 vx = 0.05f; // meters per second
   f32 dt = (f32)((timestamp - LAST_TIMESTAMP) / 1000.0f); // in seconds
   f32 dx = vx * dt;
   POSITION_IN_METERS.x += dx;
 
-  logFloat32(POSITION_IN_METERS.x);
+  f32 *verticesBuffer = (f32 *)getBufferBase();
 
   Position positionInPixels;
   positionInPixels.x = POSITION_IN_METERS.x * metersToPixels;
   positionInPixels.y = POSITION_IN_METERS.y * metersToPixels;
 
+  f32 minX = positionInPixels.x;
+  f32 minY = positionInPixels.y;
+  f32 maxX = positionInPixels.x + playerWidthInPixels;
+  f32 maxY = positionInPixels.y + playerHeightInPixels;
+
   drawRectangle(
-      triangleBase,
-      positionInPixels.x,
-      positionInPixels.y,
-      positionInPixels.x + playerWidthInPixels,
-      positionInPixels.y + playerHeightInPixels
+      verticesBuffer,
+      minX,
+      minY,
+      maxX,
+      maxY
   );
 }
