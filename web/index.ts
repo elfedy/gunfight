@@ -1,3 +1,8 @@
+// Global Config
+const GlobalConfig = {
+  debug: true,
+};
+
 // NOTE(fede): 1 page = 64 KB
 let wasmMemory = new WebAssembly.Memory({initial: 160, maximum: 160});
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
@@ -22,20 +27,9 @@ WebAssembly.instantiateStreaming(
 });
 
 function main(wasm) {
-  //window.requestAnimationFrame(run(wasm));
-  let timestamp = 0;
   // TODO: draw the triangle
   let canvas = <HTMLCanvasElement> document.getElementById('canvas');
 
-  /*
-  let colorsPointer = wasm.instance.exports.color_shader_colors_pointer();
-  let colorsSlice = 
-    wasmMemory.buffer.slice(
-      colorsPointer,
-      colorsPointer + colorShaderEntitiesCount * 4 * 4 // 4 float32s per color
-    );
-  let colorsBuffer = new Float32Array(colorsSlice);
-  */
 
   // Initialize web gl
   let gl = canvas.getContext('webgl');
@@ -52,8 +46,10 @@ function main(wasm) {
 }
 
 function run(wasm, gl, colorShaderInfo) {
-  return (timestamp) => {
-    wasm.instance.exports.updateAndRender(timestamp); 
+  return (frameTimestamp) => {
+    let DEBUGTimestamp = frameTimestamp;
+    wasm.instance.exports.updateAndRender(frameTimestamp); 
+    DEBUGTimestamp = DEBUGTime("Update", DEBUGTimestamp);
 
     gl.clearColor(0.9, 0.9, 0.9, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -81,27 +77,48 @@ function run(wasm, gl, colorShaderInfo) {
     let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
     gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrixProjection);
 
-    let numberOfVertices = 6;
+    let numberOfTriangles = wasm.instance.exports.getTrianglesCount();
+    let numberOfVertices = numberOfTriangles * 3;
     let pointsPerVertex = 2;
     let bytesPerFloat32 = 4;
+
     // Add vertices to array buffer
-    let bufferBase = wasm.instance.exports.getBufferBase();
-    let verticesSlice = 
+    let vertexBufferBase = wasm.instance.exports.getVertexBufferBase();
+    let vertexSlice = 
       wasmMemory.buffer.slice(
-        bufferBase,
-        bufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
+        vertexBufferBase,
+        vertexBufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
       );
-    let verticesBuffer = new Float32Array(verticesSlice);
-    gl.bufferData(gl.ARRAY_BUFFER, verticesBuffer, gl.STATIC_DRAW);
-    console.log(bufferBase);
-    console.log(verticesBuffer);
+    let vertexBuffer = new Float32Array(vertexSlice);
+    gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
 
-    let colorArray = new Float32Array([1.0, 1.0, 0, 1.0]);
-    gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);
+    let colorBufferUnitSize = 4 * bytesPerFloat32; // 4 f32s pre color
+    let colorBufferBase = wasm.instance.exports.getColorBufferBase();
+    let colorSlice = 
+      wasmMemory.buffer.slice(
+        colorBufferBase,
+        colorBufferBase + numberOfTriangles * colorBufferUnitSize // 4 float32s per color
+      );
+    let colorArray = new Float32Array(colorSlice);
 
-    let offset = 0;
-    let count = numberOfVertices;
-    gl.drawArrays(gl.TRIANGLES, offset, count);
+    DEBUGTimestamp = DEBUGTime("Shader Setup", DEBUGTimestamp);
+
+    // Draw Triangles one by one so that we can set the color
+    for(let triangleIndex = 0; triangleIndex < numberOfTriangles; triangleIndex++) {
+
+      let colorSliceOffset = triangleIndex * 4;
+      let color = colorArray.slice(colorSliceOffset, colorSliceOffset + 4);
+
+      gl.uniform4fv(colorShaderInfo.locations.uColor, color);
+
+      let verticesToDraw = 3;
+      let vertexBufferOffset = triangleIndex * 3;
+      gl.drawArrays(gl.TRIANGLES, vertexBufferOffset, verticesToDraw);
+
+    }
+    DEBUGTimestamp = DEBUGTime("Draw Triangles", DEBUGTimestamp);
+
+    DEBUGTime("Frame Total", frameTimestamp);
     window.requestAnimationFrame(run(wasm, gl, colorShaderInfo));
   }
 }
@@ -128,91 +145,18 @@ function getCanvasHeight() {
   return canvas.height;
 }
 
+function DEBUG(log: string) {
+  if (GlobalConfig.debug) {
+    console.log(log);
+  }
+}
 
-// RUN
-/*
-function gameLoopFn(wasm) {
-  // TODO: Game hangs here for some reason when looping with requestAnimationFrame
-  let loop = function(timestamp) {
-    let canvas = <HTMLCanvasElement> document.getElementById('canvas');
-
-    wasm.instance.exports.game_update_and_render(timestamp);
-    let colorShaderEntitiesCount = wasm.instance.exports.color_shader_entities_count();
-
-    let verticesPointer = wasm.instance.exports.color_shader_vertices_pointer();
-    // NOTE: Asumes squared entites which involves 6 pairs of vertices of 4 bytes each (float32)
-    let verticesSlice = 
-      wasmMemory.buffer.slice(
-        verticesPointer,
-        verticesPointer + colorShaderEntitiesCount * 6 * 2 * 4
-      );
-    let verticesBuffer = new Float32Array(verticesSlice);
-
-    let colorsPointer = wasm.instance.exports.color_shader_colors_pointer();
-    let colorsSlice = 
-      wasmMemory.buffer.slice(
-        colorsPointer,
-        colorsPointer + colorShaderEntitiesCount * 4 * 4 // 4 float32s per color
-      );
-    let colorsBuffer = new Float32Array(colorsSlice);
-
-    // Initialize web gl
-    let gl = canvas.getContext('webgl');
-    if(gl === null) {
-      alert("Unable to initialize WebGL. Your browser or machine may not support it.");
-      return;
-    }
-    
-    // Setup Shaders
-    let colorShaderInfo = colorShaderSetup(gl);
-    gl.clearColor(0.9, 0.9, 0.9, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // Tell WebGL how to convert from clip space to pixels
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-    gl.useProgram(colorShaderInfo.program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorShaderInfo.buffers.aPosition);
-
-    gl.vertexAttribPointer(
-      colorShaderInfo.locations.aPosition,
-      2,  // size: components per iteration
-      gl.FLOAT,  // data type
-      false, // normalize
-      0, // stride: bytes between beggining of consecutive vetex attributes in buffer
-      0 // offset: where to start reading data from the buffer
-    );
-
-    // Enable vertex attribute
-    gl.enableVertexAttribArray(colorShaderInfo.locations.aPosition);
-
-    let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
-    let matrix = Mat3.identity();
-    matrix = Mat3.multiply(matrix, matrixProjection);
-    gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrix);
-
-
-    // Add vertices to array buffer
-    gl.bufferData(gl.ARRAY_BUFFER, verticesBuffer, gl.STATIC_DRAW);
-
-    for(let i = 0; i < colorShaderEntitiesCount; i++) {
-      let colorArray = colorsBuffer.slice(4 * i, 4 * i + 4);
-      gl.uniform4fv(colorShaderInfo.locations.uColor, colorArray);
-
-
-      let offset = 6 * i;
-      let count = 6;
-      gl.drawArrays(gl.TRIANGLES, offset, count);
-      
-      //requestAnimationFrame(loop);
-    }
+function DEBUGTime(log: string, start: number): number {
+  let end = performance.now();
+  if (GlobalConfig.debug) {
+    let duration = end - start;
+    console.log(`${log}: ${duration}ms`)
   }
 
-  return loop;
+  return end;
 }
-
-function main(wasm) {
-  let gameLoop = gameLoopFn(wasm);
-  requestAnimationFrame(gameLoop);
-}
-*/
