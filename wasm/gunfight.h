@@ -20,6 +20,7 @@ typedef long bool32;
 
 #define assert(expression) if(!expression) { __builtin_trap(); }
 
+
 typedef struct Position {
   f32 x;
   f32 y;
@@ -36,3 +37,28 @@ typedef struct Buffer {
   u8 *current;
   u8 *base;
 } Buffer;
+
+typedef struct GameState {
+  Position playerPosition;
+} GameState;
+
+typedef struct GameButtonState
+{
+  bool32 isDown;
+} GameButtonState;
+
+typedef struct GameControllerInput
+{
+  union {
+    GameButtonState buttons[6];
+    struct {
+      GameButtonState moveUp;
+      GameButtonState moveDown;
+      GameButtonState moveRight;
+      GameButtonState moveLeft;
+
+      GameButtonState action;
+      GameButtonState pause;
+    };
+  };
+} GameControllerInput;

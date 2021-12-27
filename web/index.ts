@@ -1,6 +1,6 @@
 // Global Config
 const GlobalConfig = {
-  debug: true,
+  debug: false,
 };
 
 // NOTE(fede): 1 page = 64 KB
@@ -41,8 +41,47 @@ function main(wasm) {
   // Setup Shaders
   let colorShaderInfo = colorShaderSetup(gl);
 
+
+  // Setup event listeners
+	const processKeyChange = (keyCode, isDown) => {
+		let keyIndex = getKeyIndex(keyCode);
+		
+		if (keyIndex !== null) {
+			wasm.instance.exports.processControllerInput(keyIndex, isDown);
+		}
+	}
+  window.addEventListener('keydown', (e) => processKeyChange(e.code, 1));
+  window.addEventListener('keyup', (e) => processKeyChange(e.code, 0));
+ 
   // UPDATE AND RENDER
   window.requestAnimationFrame(run(wasm, gl, colorShaderInfo));
+}
+
+
+function getKeyIndex(keyCode) {
+    switch(keyCode) {
+      case 'ArrowUp': {
+				return 0;
+      } break;
+      case 'ArrowDown': {
+				return 1;
+      } break;
+      case 'ArrowRight': {
+				return 2;
+      } break;
+      case 'ArrowLeft': {
+				return 3;
+      } break;
+      case 'Space': {
+				return 4;
+      } break;
+      case 'KeyP': {
+				return 5;
+      } break;
+			default: {
+				return null;
+			}	
+    }
 }
 
 function run(wasm, gl, colorShaderInfo) {

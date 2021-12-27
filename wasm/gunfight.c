@@ -5,12 +5,19 @@ void logFloat32(f32 val);
 
 extern u8 *__heap_base;
 
-// GLOBAL VARIABLES
+// NOTE(fede): We define everything statically here because we already have all the memory
+// we will use (it is allocated and passed from js as a WebAssembly.Memory object.
+// Defining variables used globally in the environment seems not worth it here
+// as we would need to decode memory from js to wasm
+
+// GLOBAL GAME STATE
 global_variable bool32 globalIsInitialized = 0;
 global_variable f64 globalLastTimestamp;
+global_variable GameState globalGameState;
+global_variable GameControllerInput globalGameControllerInput = {};
+global_variable GameControllerInput globalLastFrameControllerInput = {};
 
-global_variable Position globalPlayerPositionInMeters;
-
+// GLOBAL BUFFERS
 // 4 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
 // 4 * 4 * 3 * 100 = 4800 bytes =~ 4.6KB
 global_variable u32 globalVertexBufferSize = 4800;
@@ -18,7 +25,18 @@ global_variable u32 globalVertexBufferSize = 4800;
 // 4 * 4 * 100 = 1600 bytes =~ 1.6KB
 global_variable u32 globalColorBufferSize = 1600;
 
+// GLOBAL FRAME STATE
 global_variable u32 globalTrianglesCount = 0;
+
+export u8 *getBufferBase() {
+    return __heap_base;
+}
+
+// CONTROLLER
+export void processControllerInput(u32 keyIndex, bool32 isDown) {
+    GameButtonState *buttonState = &globalGameControllerInput.buttons[keyIndex];
+    buttonState->isDown = isDown;
+}
 
 // DRAW
 internal void drawRectangle(
@@ -63,9 +81,6 @@ internal void drawRectangle(
 
 }
 
-export u8 *getBufferBase() {
-    return __heap_base;
-}
 
 // NOTE(fede)
 // from base we store in order:
@@ -104,23 +119,40 @@ export void updateAndRender(f64 timestamp) {
   f32 playerHeightInPixels = playerHeightInMeters * metersToPixels;
 
   if(!globalIsInitialized) {
-    globalPlayerPositionInMeters.x = 1.0f;
-    globalPlayerPositionInMeters.y = 5.0f;
+    globalGameState.playerPosition.x = 1.0f;
+    globalGameState.playerPosition.y = 5.0f;
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
   }
 
-  f32 vx = 1.5f; // meters per second
+  f32 vx = 0.0f; // meters per second
+  f32 vy = 0.0f;
+
+  if(globalGameControllerInput.moveUp.isDown) {
+      vy = 1.5f;
+  }
+  if(globalGameControllerInput.moveDown.isDown) {
+      vy = -1.5f;
+  }
+  if(globalGameControllerInput.moveRight.isDown) {
+      vx = 1.5f;
+  }
+  if(globalGameControllerInput.moveLeft.isDown) {
+      vx = -1.5f;
+  }
+
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
   f32 dx = vx * dt;
-  globalPlayerPositionInMeters.x += dx;
+  f32 dy = vy * dt;
+  globalGameState.playerPosition.x += dx;
+  globalGameState.playerPosition.y += dy;
 
   Buffer verticesBuffer = { getVertexBufferBase(), getVertexBufferBase() };
   Buffer colorsBuffer = { getColorBufferBase(), getColorBufferBase() };
 
   Position positionInPixels;
-  positionInPixels.x = globalPlayerPositionInMeters.x * metersToPixels;
-  positionInPixels.y = globalPlayerPositionInMeters.y * metersToPixels;
+  positionInPixels.x = globalGameState.playerPosition.x * metersToPixels;
+  positionInPixels.y = globalGameState.playerPosition.y * metersToPixels;
 
   f32 minX = positionInPixels.x;
   f32 minY = positionInPixels.y;
