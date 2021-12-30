@@ -113,6 +113,9 @@ export void updateAndRender(f64 timestamp) {
   f32 playerHeightInMeters = 1.8f;
   f32 playerWidthInMeters = 0.6f;
 
+  f32 levelHeightInMeters = 13.5f;
+  f32 levelWidthInMeters = 24.0f;
+
   f32 metersToPixels = 40;
 
   f32 playerWidthInPixels = playerWidthInMeters * metersToPixels;
@@ -147,6 +150,24 @@ export void updateAndRender(f64 timestamp) {
   globalGameState.playerPosition.x += dx;
   globalGameState.playerPosition.y += dy;
 
+  // Collision with level boundaries
+  f32 playerMaxX = levelWidthInMeters - playerWidthInMeters;
+  f32 playerMinX = 0;
+  f32 playerMaxY = levelHeightInMeters - playerHeightInMeters;
+  f32 playerMinY = 0;
+  if(globalGameState.playerPosition.x > playerMaxX) {
+      globalGameState.playerPosition.x = playerMaxX;
+  }
+  if(globalGameState.playerPosition.x < playerMinX) {
+      globalGameState.playerPosition.x = playerMinX;
+  }
+  if(globalGameState.playerPosition.y > playerMaxY) {
+      globalGameState.playerPosition.y = playerMaxY;
+  }
+  if(globalGameState.playerPosition.y < playerMinY) {
+      globalGameState.playerPosition.y = playerMinY;
+  }
+
   Buffer verticesBuffer = { getVertexBufferBase(), getVertexBufferBase() };
   Buffer colorsBuffer = { getColorBufferBase(), getColorBufferBase() };
 
@@ -175,36 +196,6 @@ export void updateAndRender(f64 timestamp) {
       maxY
   );
 
-  Color anotherColor;
-  anotherColor.r = 1.0f;
-  anotherColor.g = 1.0f;
-  anotherColor.b = 0.0f;
-  anotherColor.a = 1.0f;
-
-  drawRectangle(
-      &verticesBuffer,
-      &colorsBuffer,
-      anotherColor,
-      100,
-      100,
-      200,
-      200 
-  );
-
-  anotherColor.r = 1.0f;
-  anotherColor.g = 0.0f;
-  anotherColor.b = 1.0f;
-  anotherColor.a = 1.0f;
-
-  drawRectangle(
-      &verticesBuffer,
-      &colorsBuffer,
-      anotherColor,
-      400,
-      400,
-      450,
-      450 
-  );
 
   globalLastTimestamp = timestamp;
 }
