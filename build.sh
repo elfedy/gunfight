@@ -12,3 +12,6 @@ mkdir -p build
 
 ./build_web.sh
 ./build_wasm.sh
+
+# Copy assets
+cp assets/*png build/

@@ -7,6 +7,19 @@ const GlobalConfig = {
 let wasmMemory = new WebAssembly.Memory({initial: 160, maximum: 160});
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
 
+let playerImage = new Image();
+let context = {
+  wasm: null,
+  images: [],
+  loadedImages: 0,
+}
+
+playerImage.onload = () =>  {
+  context.images.push(playerImage);
+  context.loadedImages++;
+};
+playerImage.src = 'player.png';
+
 WebAssembly.instantiateStreaming(
   fetch('gunfight.wasm'),
   {
@@ -23,10 +36,21 @@ WebAssembly.instantiateStreaming(
     }
   }
 ).then(wasm => {
-  main(wasm);
+  context.wasm = wasm;
+  waitForInitialization();
 });
 
-function main(wasm) {
+function waitForInitialization() {
+  if(context.wasm !== null && context.loadedImages == 1) {
+    main(context);
+  } else {
+    setTimeout(waitForInitialization, 100);
+  }
+}
+
+function main(context) {
+  console.log(context);
+  let wasm = context.wasm;
   // TODO: draw the triangle
   let canvas = <HTMLCanvasElement> document.getElementById('canvas');
 

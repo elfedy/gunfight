@@ -110,8 +110,8 @@ export void updateAndRender(f64 timestamp) {
   f32 levelHeightInPixels = 960;
   f32 levelWidthInPixels = 540;
 
-  f32 playerHeightInMeters = 1.8f;
-  f32 playerWidthInMeters = 0.6f;
+  f32 playerHeightInMeters = 1.6f;
+  f32 playerWidthInMeters = 1.6f;
 
   f32 levelHeightInMeters = 13.5f;
   f32 levelWidthInMeters = 24.0f;
