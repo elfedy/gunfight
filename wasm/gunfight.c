@@ -1,10 +1,5 @@
 #include "gunfight.h"
 
-// ENV IMPORTS
-void logFloat32(f32 val);
-
-extern u8 *__heap_base;
-
 // NOTE(fede): We define everything statically here because we already have all the memory
 // we will use (it is allocated and passed from js as a WebAssembly.Memory object.
 // Defining variables used globally in the environment seems not worth it here
@@ -13,35 +8,98 @@ extern u8 *__heap_base;
 // GLOBAL GAME STATE
 global_variable bool32 globalIsInitialized = 0;
 global_variable f64 globalLastTimestamp;
+
 global_variable GameState globalGameState;
-global_variable GameControllerInput globalGameControllerInput = {};
-global_variable GameControllerInput globalLastFrameControllerInput = {};
+
+global_variable GameControllerInput globalGameControllerInputCurrent = {};
+global_variable GameControllerInput globalGameControllerInputLastFrame = {};
+
+global_variable u32 globalColorShaderTrianglesCount = 0;
+global_variable u32 globalTextureShaderTrianglesCount = 0;
 
 // GLOBAL BUFFERS
-// 4 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
-// 4 * 4 * 3 * 100 = 4800 bytes =~ 4.6KB
-global_variable u32 globalVertexBufferSize = 4800;
-// 4 f32 (4 bytes) per color, 100 triangles
-// 4 * 4 * 100 = 1600 bytes =~ 1.6KB
-global_variable u32 globalColorBufferSize = 1600;
+
+
+// Define indices for each buffer
+enum bufferIndex {INDEX_COLOR_SHADER_VERTICES, INDEX_COLOR_SHADER_COLORS, INDEX_TEXTURE_SHADER_VERTICES};
+
+global_variable u32 globalBufferSizes[3] = {
+    // ColorShaderVertices: 4 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
+    4800,
+    // ColorShaderColor: 4 f32 (4 bytes) per color, 100 triangles
+    1600,
+    // TextureShaderVertices: 4 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
+    4800
+};
+
 
 // GLOBAL FRAME STATE
-global_variable u32 globalTrianglesCount = 0;
-
-export u8 *getBufferBase() {
+export u8 *getHeapBase() {
     return __heap_base;
+}
+
+export u8 *getBufferBase(index) {
+    u8 *ret = __heap_base;
+
+    assert(index < arrayLength(globalBufferSizes));
+
+    for(int i = 0; i < index; i++) {
+        ret = ret + globalBufferSizes[i];
+    }
+    return ret;
+}
+
+export u32 colorShaderGetTrianglesCount() {
+    return globalColorShaderTrianglesCount;
+}
+
+internal
+void bufferPushf32(Buffer *buffer, f32 value) {
+    *((f32 *)(buffer->current + buffer->offset)) = value;
+    buffer->offset += sizeof(f32);
+}
+
+ColorShaderFrame colorShaderFrameInit() {
+    ColorShaderFrame ret = {};
+    ret.trianglesCount = 0;
+
+    Buffer verticesBuffer = {};
+    verticesBuffer.current = getBufferBase(INDEX_COLOR_SHADER_VERTICES);
+    verticesBuffer.offset = 0;
+
+    ret.verticesBuffer = verticesBuffer;
+
+    Buffer colorsBuffer = {};
+    colorsBuffer.current = getBufferBase(INDEX_COLOR_SHADER_COLORS);
+    colorsBuffer.offset = 0;
+
+    ret.colorsBuffer = colorsBuffer;
+
+    return ret;
+}
+
+TextureShaderFrame textureShaderFrameInit() {
+    TextureShaderFrame ret = {};
+    ret.trianglesCount = 0;
+
+    Buffer verticesBuffer = {};
+    verticesBuffer.current = getBufferBase(INDEX_COLOR_SHADER_VERTICES);
+    verticesBuffer.offset = 0;
+
+    ret.verticesBuffer = verticesBuffer;
+
+    return ret;
 }
 
 // CONTROLLER
 export void processControllerInput(u32 keyIndex, bool32 isDown) {
-    GameButtonState *buttonState = &globalGameControllerInput.buttons[keyIndex];
+    GameButtonState *buttonState = &globalGameControllerInputCurrent.buttons[keyIndex];
     buttonState->isDown = isDown;
 }
 
 // DRAW
 internal void drawRectangle(
-        Buffer *vertexBuffer,
-        Buffer *colorBuffer,
+        ColorShaderFrame *colorShaderFrame,
         Color color,
         f32 minX,
         f32 minY,
@@ -57,54 +115,29 @@ internal void drawRectangle(
     maxX, maxY,
   };
 
-  f32 *vertexPointer = (f32 *)vertexBuffer->current;
-  f32 *colorPointer = (f32 *)colorBuffer->current;
+  Buffer *verticesBuffer = &colorShaderFrame->verticesBuffer;
+  Buffer *colorsBuffer = &colorShaderFrame->colorsBuffer;
 
   for(int i = 0; i < arrayLength(vertices); i++) {
-    *vertexPointer++ = vertices[i];
+    bufferPushf32(verticesBuffer, vertices[i]);
   }
 
   // every three vertices pairs (triangle) we need to specify color and increment triangles
   // count
   for(int i = 0; i < arrayLength(vertices)/6; i++) {
-    *colorPointer++ = color.r;
-    *colorPointer++ = color.g;
-    *colorPointer++ = color.b;
-    *colorPointer++ = color.a;
+    bufferPushf32(colorsBuffer, color.r);
+    bufferPushf32(colorsBuffer, color.g);
+    bufferPushf32(colorsBuffer, color.b);
+    bufferPushf32(colorsBuffer, color.a);
 
-    ++globalTrianglesCount;
+    colorShaderFrame->trianglesCount++;
   }
-
-  vertexBuffer->current = (u8 *)vertexPointer;
-  colorBuffer->current = (u8 *)colorPointer;
-
-
 }
 
-
-// NOTE(fede)
-// from base we store in order:
-// 1) vertices
-// 2) colors
-export u8 *getVertexBufferBase() {
-    return __heap_base;
-}
-
-export u8 *getColorBufferBase() {
-    return (__heap_base + globalVertexBufferSize);
-}
-
-export u32 getTrianglesCount() {
-    return globalTrianglesCount;
-}
 
 // RENDER
-internal void resetFrameState() {
-    globalTrianglesCount = 0;
-}
 
 export void updateAndRender(f64 timestamp) {
-  resetFrameState();
   //TODO(fede): This values should be more dynamic. Also how to achieve this while
   // preserving aspect ratio?
   f32 levelHeightInPixels = 960;
@@ -131,16 +164,16 @@ export void updateAndRender(f64 timestamp) {
   f32 vx = 0.0f; // meters per second
   f32 vy = 0.0f;
 
-  if(globalGameControllerInput.moveUp.isDown) {
+  if(globalGameControllerInputCurrent.moveUp.isDown) {
       vy = 1.5f;
   }
-  if(globalGameControllerInput.moveDown.isDown) {
+  if(globalGameControllerInputCurrent.moveDown.isDown) {
       vy = -1.5f;
   }
-  if(globalGameControllerInput.moveRight.isDown) {
+  if(globalGameControllerInputCurrent.moveRight.isDown) {
       vx = 1.5f;
   }
-  if(globalGameControllerInput.moveLeft.isDown) {
+  if(globalGameControllerInputCurrent.moveLeft.isDown) {
       vx = -1.5f;
   }
 
@@ -168,8 +201,8 @@ export void updateAndRender(f64 timestamp) {
       globalGameState.playerPosition.y = playerMinY;
   }
 
-  Buffer verticesBuffer = { getVertexBufferBase(), getVertexBufferBase() };
-  Buffer colorsBuffer = { getColorBufferBase(), getColorBufferBase() };
+  //TODO: initialize shader frames
+  ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
 
   Position positionInPixels;
   positionInPixels.x = globalGameState.playerPosition.x * metersToPixels;
@@ -187,8 +220,7 @@ export void updateAndRender(f64 timestamp) {
   color.a = 1.0f;
 
   drawRectangle(
-      &verticesBuffer,
-      &colorsBuffer,
+      &colorShaderFrame,
       color,
       minX,
       minY,
@@ -197,5 +229,7 @@ export void updateAndRender(f64 timestamp) {
   );
 
 
+  globalColorShaderTrianglesCount = colorShaderFrame.trianglesCount; 
   globalLastTimestamp = timestamp;
+  globalGameControllerInputLastFrame = globalGameControllerInputCurrent;
 }

@@ -49,7 +49,6 @@ function waitForInitialization() {
 }
 
 function main(context) {
-  console.log(context);
   let wasm = context.wasm;
   // TODO: draw the triangle
   let canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -64,6 +63,9 @@ function main(context) {
 
   // Setup Shaders
   let colorShaderInfo = colorShaderSetup(gl);
+  let textureShaderInfo = textureShaderSetup(gl, context.images[0]);
+
+  console.log(textureShaderInfo);
 
 
   // Setup event listeners
@@ -140,27 +142,29 @@ function run(wasm, gl, colorShaderInfo) {
     let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
     gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrixProjection);
 
-    let numberOfTriangles = wasm.instance.exports.getTrianglesCount();
+    let numberOfTriangles = wasm.instance.exports.colorShaderGetTrianglesCount();
+    console.log(numberOfTriangles);
     let numberOfVertices = numberOfTriangles * 3;
     let pointsPerVertex = 2;
     let bytesPerFloat32 = 4;
 
     // Add vertices to array buffer
-    let vertexBufferBase = wasm.instance.exports.getVertexBufferBase();
+    let vertexBufferBase = wasm.instance.exports.getBufferBase(0);
     let vertexSlice = 
       wasmMemory.buffer.slice(
         vertexBufferBase,
         vertexBufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
       );
+    console.log(vertexSlice);
     let vertexBuffer = new Float32Array(vertexSlice);
     gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
 
-    let colorBufferUnitSize = 4 * bytesPerFloat32; // 4 f32s pre color
-    let colorBufferBase = wasm.instance.exports.getColorBufferBase();
+    let colorBufferUnitSize = 4 * bytesPerFloat32; // 4 f32s per color
+    let colorBufferBase = wasm.instance.exports.getBufferBase(1);
     let colorSlice = 
       wasmMemory.buffer.slice(
         colorBufferBase,
-        colorBufferBase + numberOfTriangles * colorBufferUnitSize // 4 float32s per color
+        colorBufferBase + numberOfTriangles * colorBufferUnitSize
       );
     let colorArray = new Float32Array(colorSlice);
 
