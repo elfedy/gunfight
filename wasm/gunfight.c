@@ -14,22 +14,33 @@ global_variable GameState globalGameState;
 global_variable GameControllerInput globalGameControllerInputCurrent = {};
 global_variable GameControllerInput globalGameControllerInputLastFrame = {};
 
-global_variable u32 globalColorShaderTrianglesCount = 0;
-global_variable u32 globalTextureShaderTrianglesCount = 0;
+global_variable u32 globalColorShaderFrameTrianglesCount = 0;
+global_variable u32 globalTextureShaderFrameTrianglesCount = 0;
 
 // GLOBAL BUFFERS
 
 
 // Define indices for each buffer
-enum bufferIndex {INDEX_COLOR_SHADER_VERTICES, INDEX_COLOR_SHADER_COLORS, INDEX_TEXTURE_SHADER_VERTICES};
+enum bufferIndex {
+    // Color shader vertex positions to be drawn next frame
+    INDEX_COLOR_SHADER_A_POSITION,
+    // Color shader uniform attrbute color to be set when drawing each triangle
+    INDEX_COLOR_SHADER_U_COLOR,
+    // Texture shader vertex postions to be drawn next frame
+    INDEX_TEXTURE_SHADER_A_POSITION,
+    // Texture shader texture coordinates for each vertex in aPosition attribute
+    INDEX_TEXTURE_SHADER_A_TEX_COORD
+};
 
-global_variable u32 globalBufferSizes[3] = {
-    // ColorShaderVertices: 4 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
-    4800,
+global_variable u32 globalBufferSizes[4] = {
+    // ColorShaderAPosition: 2 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
+    2400,
     // ColorShaderColor: 4 f32 (4 bytes) per color, 100 triangles
     1600,
-    // TextureShaderVertices: 4 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
-    4800
+    // TextureShaderAPosition: 2 f32 (4 bytes) per vertex, 3 vertices per triangle, 100 triangles
+    2400,
+    // Texture Shader ATexCoord: same as A position as we want a set of coordinates per vertex
+    2400
 };
 
 
@@ -50,7 +61,11 @@ export u8 *getBufferBase(index) {
 }
 
 export u32 colorShaderGetTrianglesCount() {
-    return globalColorShaderTrianglesCount;
+    return globalColorShaderFrameTrianglesCount;
+}
+
+export u32 textureShaderGetTrianglesCount() {
+    return globalTextureShaderFrameTrianglesCount;
 }
 
 internal
@@ -59,21 +74,22 @@ void bufferPushf32(Buffer *buffer, f32 value) {
     buffer->offset += sizeof(f32);
 }
 
+// SHADER FRAMES
 ColorShaderFrame colorShaderFrameInit() {
     ColorShaderFrame ret = {};
     ret.trianglesCount = 0;
 
-    Buffer verticesBuffer = {};
-    verticesBuffer.current = getBufferBase(INDEX_COLOR_SHADER_VERTICES);
-    verticesBuffer.offset = 0;
+    Buffer aPositionBuffer = {};
+    aPositionBuffer.current = getBufferBase(INDEX_COLOR_SHADER_A_POSITION);
+    aPositionBuffer.offset = 0;
 
-    ret.verticesBuffer = verticesBuffer;
+    ret.aPositionBuffer = aPositionBuffer;
 
-    Buffer colorsBuffer = {};
-    colorsBuffer.current = getBufferBase(INDEX_COLOR_SHADER_COLORS);
-    colorsBuffer.offset = 0;
+    Buffer uColorsBuffer = {};
+    uColorsBuffer.current = getBufferBase(INDEX_COLOR_SHADER_U_COLOR);
+    uColorsBuffer.offset = 0;
 
-    ret.colorsBuffer = colorsBuffer;
+    ret.uColorsBuffer = uColorsBuffer;
 
     return ret;
 }
@@ -82,11 +98,17 @@ TextureShaderFrame textureShaderFrameInit() {
     TextureShaderFrame ret = {};
     ret.trianglesCount = 0;
 
-    Buffer verticesBuffer = {};
-    verticesBuffer.current = getBufferBase(INDEX_COLOR_SHADER_VERTICES);
-    verticesBuffer.offset = 0;
+    Buffer aPositionBuffer = {};
+    aPositionBuffer.current = getBufferBase(INDEX_TEXTURE_SHADER_A_POSITION);
+    aPositionBuffer.offset = 0;
 
-    ret.verticesBuffer = verticesBuffer;
+    Buffer aTexCoordBuffer = {};
+
+    aTexCoordBuffer.current = getBufferBase(INDEX_TEXTURE_SHADER_A_TEX_COORD);
+    aTexCoordBuffer.offset = 0;
+
+    ret.aPositionBuffer = aPositionBuffer;
+    ret.aTexCoordBuffer = aTexCoordBuffer;
 
     return ret;
 }
@@ -98,7 +120,7 @@ export void processControllerInput(u32 keyIndex, bool32 isDown) {
 }
 
 // DRAW
-internal void drawRectangle(
+internal void colorShaderDrawRectangle(
         ColorShaderFrame *colorShaderFrame,
         Color color,
         f32 minX,
@@ -115,23 +137,62 @@ internal void drawRectangle(
     maxX, maxY,
   };
 
-  Buffer *verticesBuffer = &colorShaderFrame->verticesBuffer;
-  Buffer *colorsBuffer = &colorShaderFrame->colorsBuffer;
+  Buffer *aPositionBuffer = &colorShaderFrame->aPositionBuffer;
+  Buffer *uColorsBuffer = &colorShaderFrame->uColorsBuffer;
 
   for(int i = 0; i < arrayLength(vertices); i++) {
-    bufferPushf32(verticesBuffer, vertices[i]);
+    bufferPushf32(aPositionBuffer, vertices[i]);
   }
 
   // every three vertices pairs (triangle) we need to specify color and increment triangles
   // count
   for(int i = 0; i < arrayLength(vertices)/6; i++) {
-    bufferPushf32(colorsBuffer, color.r);
-    bufferPushf32(colorsBuffer, color.g);
-    bufferPushf32(colorsBuffer, color.b);
-    bufferPushf32(colorsBuffer, color.a);
+    bufferPushf32(uColorsBuffer, color.r);
+    bufferPushf32(uColorsBuffer, color.g);
+    bufferPushf32(uColorsBuffer, color.b);
+    bufferPushf32(uColorsBuffer, color.a);
 
     colorShaderFrame->trianglesCount++;
   }
+}
+
+internal void textureShaderDrawPlayer(
+    TextureShaderFrame *textureShaderFrame,
+    f32 minX,
+    f32 minY,
+    f32 maxX,
+    f32 maxY
+) {
+  f32 aPositionVals[12] = {
+    minX, minY,
+    maxX, minY,
+    minX, maxY,
+    minX, maxY,
+    maxX, minY,
+    maxX, maxY,
+  };
+
+  f32 aTexCoordVals[12] = {
+      0.0f,  0.0f,
+      1.0f,  0.0f,
+      0.0f,  1.0f,
+      0.0f,  1.0f,
+      1.0f,  0.0f,
+      1.0f,  1.0f
+  };
+
+  Buffer *aPositionBuffer = &textureShaderFrame->aPositionBuffer;
+  Buffer *aTexCoordBuffer = &textureShaderFrame->aTexCoordBuffer;
+
+  for(int i = 0; i < arrayLength(aPositionVals); i++) {
+    bufferPushf32(aPositionBuffer, aPositionVals[i]);
+  }
+
+  for(int i = 0; i < arrayLength(aTexCoordVals); i++) {
+    bufferPushf32(aTexCoordBuffer, aTexCoordVals[i]);
+  }
+
+  textureShaderFrame->trianglesCount += 2;
 }
 
 
@@ -164,17 +225,19 @@ export void updateAndRender(f64 timestamp) {
   f32 vx = 0.0f; // meters per second
   f32 vy = 0.0f;
 
+  f32 dPlayerP = 5.0f;
+
   if(globalGameControllerInputCurrent.moveUp.isDown) {
-      vy = 1.5f;
+      vy = dPlayerP;
   }
   if(globalGameControllerInputCurrent.moveDown.isDown) {
-      vy = -1.5f;
+      vy = -dPlayerP;
   }
   if(globalGameControllerInputCurrent.moveRight.isDown) {
-      vx = 1.5f;
+      vx = dPlayerP;
   }
   if(globalGameControllerInputCurrent.moveLeft.isDown) {
-      vx = -1.5f;
+      vx = -dPlayerP;
   }
 
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
@@ -203,6 +266,7 @@ export void updateAndRender(f64 timestamp) {
 
   //TODO: initialize shader frames
   ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
+  TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
 
   Position positionInPixels;
   positionInPixels.x = globalGameState.playerPosition.x * metersToPixels;
@@ -213,23 +277,11 @@ export void updateAndRender(f64 timestamp) {
   f32 maxX = positionInPixels.x + playerWidthInPixels;
   f32 maxY = positionInPixels.y + playerHeightInPixels;
 
-  Color color;
-  color.r = 0.0f;
-  color.g = 1.0f;
-  color.b = 1.0f;
-  color.a = 1.0f;
+  textureShaderDrawPlayer(&textureShaderFrame, minX, minY, maxX, maxY);
 
-  drawRectangle(
-      &colorShaderFrame,
-      color,
-      minX,
-      minY,
-      maxX,
-      maxY
-  );
+  globalColorShaderFrameTrianglesCount = colorShaderFrame.trianglesCount; 
+  globalTextureShaderFrameTrianglesCount = textureShaderFrame.trianglesCount; 
 
-
-  globalColorShaderTrianglesCount = colorShaderFrame.trianglesCount; 
   globalLastTimestamp = timestamp;
   globalGameControllerInputLastFrame = globalGameControllerInputCurrent;
 }

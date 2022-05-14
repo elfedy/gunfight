@@ -41,16 +41,15 @@ WebAssembly.instantiateStreaming(
 });
 
 function waitForInitialization() {
-  if(context.wasm !== null && context.loadedImages == 1) {
-    main(context);
+  if(context.wasm !== null && context.loadedImages === 1) {
+    initializeGameLoop(context);
   } else {
     setTimeout(waitForInitialization, 100);
   }
 }
 
-function main(context) {
+function initializeGameLoop(context) {
   let wasm = context.wasm;
-  // TODO: draw the triangle
   let canvas = <HTMLCanvasElement> document.getElementById('canvas');
 
 
@@ -60,13 +59,12 @@ function main(context) {
     alert("Unable to initialize WebGL. Your browser or machine may not support it.");
     return;
   }
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
   // Setup Shaders
   let colorShaderInfo = colorShaderSetup(gl);
-  let textureShaderInfo = textureShaderSetup(gl, context.images[0]);
-
-  console.log(textureShaderInfo);
-
+  let textureShaderInfo = textureShaderSetup(gl);
+  textureShaderSetTexture(gl, 'TEXTURE0', textureShaderInfo, context.images[0]);
 
   // Setup event listeners
 	const processKeyChange = (keyCode, isDown) => {
@@ -80,7 +78,7 @@ function main(context) {
   window.addEventListener('keyup', (e) => processKeyChange(e.code, 0));
  
   // UPDATE AND RENDER
-  window.requestAnimationFrame(run(wasm, gl, colorShaderInfo));
+  window.requestAnimationFrame(run(wasm, gl, colorShaderInfo, textureShaderInfo));
 }
 
 
@@ -110,8 +108,10 @@ function getKeyIndex(keyCode) {
     }
 }
 
-function run(wasm, gl, colorShaderInfo) {
+function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
   return (frameTimestamp) => {
+    window.requestAnimationFrame(run(wasm, gl, colorShaderInfo, textureShaderInfo));
+
     let DEBUGTimestamp = frameTimestamp;
     wasm.instance.exports.updateAndRender(frameTimestamp); 
     DEBUGTimestamp = DEBUGTime("Update", DEBUGTimestamp);
@@ -124,12 +124,12 @@ function run(wasm, gl, colorShaderInfo) {
 
     gl.useProgram(colorShaderInfo.program);
 
-    // Enable vertex attribute
-    gl.enableVertexAttribArray(colorShaderInfo.locations.aPosition);
+    // COLOR SHADER
 
+    // Bind aPosition to the array buffer target
     gl.bindBuffer(gl.ARRAY_BUFFER, colorShaderInfo.buffers.aPosition);
 
-    // Specify how to pull the data from the buffer
+    // Specify how to pull the data from the buffer currently set to the ARRAY BUFFER target
     gl.vertexAttribPointer(
       colorShaderInfo.locations.aPosition,
       2,  // size: components per iteration
@@ -143,7 +143,6 @@ function run(wasm, gl, colorShaderInfo) {
     gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrixProjection);
 
     let numberOfTriangles = wasm.instance.exports.colorShaderGetTrianglesCount();
-    console.log(numberOfTriangles);
     let numberOfVertices = numberOfTriangles * 3;
     let pointsPerVertex = 2;
     let bytesPerFloat32 = 4;
@@ -155,8 +154,8 @@ function run(wasm, gl, colorShaderInfo) {
         vertexBufferBase,
         vertexBufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
       );
-    console.log(vertexSlice);
     let vertexBuffer = new Float32Array(vertexSlice);
+    // Populate buffer bound to array buffer with the vetices needed to be drawn
     gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
 
     let colorBufferUnitSize = 4 * bytesPerFloat32; // 4 f32s per color
@@ -186,8 +185,65 @@ function run(wasm, gl, colorShaderInfo) {
     DEBUGTimestamp = DEBUGTime("Draw Triangles", DEBUGTimestamp);
 
     DEBUGTime("Frame Total", frameTimestamp);
-    window.requestAnimationFrame(run(wasm, gl, colorShaderInfo));
+
+    // TEXTURE SHADER
+    gl.useProgram(textureShaderInfo.program);
+
+    let textureShaderNumberOfTriangles = wasm.instance.exports.textureShaderGetTrianglesCount();
+    let textureShaderNumberOfVertices = textureShaderNumberOfTriangles * 3;
+
+    // Provide position coordinates
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureShaderInfo.buffers.aPosition);
+    gl.vertexAttribPointer(
+      textureShaderInfo.locations.aPosition,
+      2,  // size: components per iteration
+      gl.FLOAT,  // data type
+      false, // normalize
+      0, // stride: bytes between beggining of consecutive vetex attributes in buffer
+      0 // offset: where to start reading data from the buffer
+    );
+    // Add vertices to array buffer
+    let textureShaderAPositionBufferBase = wasm.instance.exports.getBufferBase(2);
+    let textureShaderAPositionBufferEnd = textureShaderAPositionBufferBase + textureShaderNumberOfVertices * pointsPerVertex * bytesPerFloat32;
+    let textureShaderAPositionSlice = 
+      wasmMemory.buffer.slice(
+        textureShaderAPositionBufferBase,
+        textureShaderAPositionBufferEnd
+      );
+    let aPositionBuffer = new Float32Array(textureShaderAPositionSlice);
+    // Populate buffer bound to array buffer with the vetices needed to be drawn
+    gl.bufferData(gl.ARRAY_BUFFER, aPositionBuffer, gl.STATIC_DRAW);
+
+    // Provide texture coordinates
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureShaderInfo.buffers.aTexCoord);
+    gl.vertexAttribPointer(
+      textureShaderInfo.locations.aTexCoord,
+      2,  // size: components per iteration
+      gl.FLOAT,  // data type
+      false, // normalize
+      0, // stride: bytes between beggining of consecutive vetex attributes in buffer
+      0 // offset: where to start reading data from the buffer
+    );
+    // TODO: this renders the texture but flipped upside down
+    let textureCoords = [
+       0.0,  0.0,
+       1.0,  0.0,
+       0.0,  1.0,
+       0.0,  1.0,
+       1.0,  0.0,
+       1.0,  1.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+
+    // Set projection matrix data
+    gl.uniformMatrix3fv(textureShaderInfo.locations.uMatrix, false, matrixProjection);
+
+    let primitiveType = gl.TRIANGLES;
+    let offset = 0;
+    let count = 6;
+    gl.drawArrays(primitiveType, offset, count);
   }
+
 }
 
 // WASM IMPORTS

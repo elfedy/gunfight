@@ -68,14 +68,15 @@ typedef struct Buffer {
 // Data about what the color shader should draw on the next frame
 typedef struct ColorShaderFrame {
   u32 trianglesCount;
-  Buffer verticesBuffer;
-  Buffer colorsBuffer;
+  Buffer aPositionBuffer;
+  Buffer uColorsBuffer;
 } ColorShaderFrame;
 
 // Data for the texture shader to draw on the current frame
 typedef struct TextureShaderFrame {
   u32 trianglesCount;
-  Buffer verticesBuffer;
+  Buffer aPositionBuffer;
+  Buffer aTexCoordBuffer;
 } TextureShaderFrame;
 
 typedef struct Color {

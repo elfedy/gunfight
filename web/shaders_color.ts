@@ -32,5 +32,9 @@ function colorShaderSetup(gl) {
     }
   };
 
+  // Enable aPosition index to be interpreted as a vertex
+  // attribute
+  gl.enableVertexAttribArray(shaderInfo.locations.aPosition);
+
   return shaderInfo;
 }
