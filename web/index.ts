@@ -210,9 +210,9 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
         textureShaderAPositionBufferBase,
         textureShaderAPositionBufferEnd
       );
-    let aPositionBuffer = new Float32Array(textureShaderAPositionSlice);
+    let aPositionValues = new Float32Array(textureShaderAPositionSlice);
     // Populate buffer bound to array buffer with the vetices needed to be drawn
-    gl.bufferData(gl.ARRAY_BUFFER, aPositionBuffer, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, aPositionValues, gl.STATIC_DRAW);
 
     // Provide texture coordinates
     gl.bindBuffer(gl.ARRAY_BUFFER, textureShaderInfo.buffers.aTexCoord);
@@ -224,7 +224,6 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
       0, // stride: bytes between beggining of consecutive vetex attributes in buffer
       0 // offset: where to start reading data from the buffer
     );
-    // TODO: this renders the texture but flipped upside down
     let textureCoords = [
        0.0,  0.0,
        1.0,  0.0,
@@ -233,7 +232,16 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
        1.0,  0.0,
        1.0,  1.0
     ];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
+    // Add vertices to array buffer
+    let textureShaderATexCoordBufferBase = wasm.instance.exports.getBufferBase(3);
+    let textureShaderATexCoordBufferEnd = textureShaderATexCoordBufferBase + textureShaderNumberOfVertices * pointsPerVertex * bytesPerFloat32;
+    let textureShaderATexCoordSlice = 
+      wasmMemory.buffer.slice(
+        textureShaderATexCoordBufferBase,
+        textureShaderATexCoordBufferEnd
+      );
+    let aTexCoordValues = new Float32Array(textureShaderATexCoordSlice);
+    gl.bufferData(gl.ARRAY_BUFFER, aTexCoordValues, gl.STATIC_DRAW);
 
     // Set projection matrix data
     gl.uniformMatrix3fv(textureShaderInfo.locations.uMatrix, false, matrixProjection);
