@@ -45,11 +45,13 @@ global_variable u32 globalBufferSizes[4] = {
 
 
 // GLOBAL FRAME STATE
+extern "C"
 export u8 *getHeapBase() {
     return __heap_base;
 }
 
-export u8 *getBufferBase(index) {
+extern "C"
+export u8 *getBufferBase(int index) {
     u8 *ret = __heap_base;
 
     assert(index < arrayLength(globalBufferSizes));
@@ -60,10 +62,12 @@ export u8 *getBufferBase(index) {
     return ret;
 }
 
+extern "C"
 export u32 colorShaderGetTrianglesCount() {
     return globalColorShaderFrameTrianglesCount;
 }
 
+extern "C"
 export u32 textureShaderGetTrianglesCount() {
     return globalTextureShaderFrameTrianglesCount;
 }
@@ -114,6 +118,7 @@ TextureShaderFrame textureShaderFrameInit() {
 }
 
 // CONTROLLER
+extern "C"
 export void processControllerInput(u32 keyIndex, bool32 isDown) {
     GameButtonState *buttonState = &globalGameControllerInputCurrent.buttons[keyIndex];
     buttonState->isDown = isDown;
@@ -198,6 +203,7 @@ internal void textureShaderDrawPlayer(
 
 // RENDER
 
+extern "C"
 export void updateAndRender(f64 timestamp) {
   //TODO(fede): This values should be more dynamic. Also how to achieve this while
   // preserving aspect ratio?

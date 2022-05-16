@@ -6,7 +6,7 @@ set -o pipefail
 echo building wasm files...
 cd ./wasm
 # 1. turn source file into llvm IR bitcode
-clang -cc1 -O3 -emit-llvm-bc -triple=wasm32-unknown-unknown-wasm -std=c11 -fvisibility hidden gunfight.c
+clang -cc1 -O3 -emit-llvm-bc -triple=wasm32-unknown-unknown-wasm gunfight.cpp
 
 # NOTE(fede): if we have serveral files we neeed to link them all here and optimize this
 
