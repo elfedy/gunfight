@@ -24,23 +24,23 @@ typedef long bool32;
 
 
 // GAME STATE 
-typedef struct Position {
+struct Position {
   f32 x;
   f32 y;
-} Position;
+};
 
-typedef struct GameState {
+struct GameState {
   Position playerPosition;
-} GameState;
+}; 
 
 
 // CONTROLLER
-typedef struct GameButtonState
+struct GameButtonState
 {
   bool32 isDown;
-} GameButtonState;
+};
 
-typedef struct GameControllerInput
+struct GameControllerInput
 {
   union {
     GameButtonState buttons[6];
@@ -54,34 +54,34 @@ typedef struct GameControllerInput
       GameButtonState pause;
     };
   };
-} GameControllerInput;
+};
 
 // BUFFERS
 
-typedef struct Buffer {
+struct Buffer {
   u8 *current;
   u32 offset;
-} Buffer;
+};
 
 // RENDERING
 
 // Data about what the color shader should draw on the next frame
-typedef struct ColorShaderFrame {
+struct ColorShaderFrame {
   u32 trianglesCount;
   Buffer aPositionBuffer;
   Buffer uColorsBuffer;
-} ColorShaderFrame;
+};
 
 // Data for the texture shader to draw on the current frame
-typedef struct TextureShaderFrame {
+struct TextureShaderFrame {
   u32 trianglesCount;
   Buffer aPositionBuffer;
   Buffer aTexCoordBuffer;
-} TextureShaderFrame;
+}; 
 
-typedef struct Color {
+struct Color {
   f32 r;
   f32 g;
   f32 b;
   f32 a;
-} Color;
+};
