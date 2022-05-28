@@ -222,61 +222,76 @@ export void updateAndRender(f64 timestamp) {
   f32 playerHeightInPixels = playerHeightInMeters * metersToPixels;
 
   if(!globalIsInitialized) {
-    globalGameState.playerPosition.x = 1.0f;
-    globalGameState.playerPosition.y = 5.0f;
+    globalGameState.playerP = {1.0f, 5.0f};
+    globalGameState.dPlayerP = {};
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
   }
 
-  f32 vx = 0.0f; // meters per second
-  f32 vy = 0.0f;
-
-  f32 dPlayerP = 5.0f;
+  V2 ddPlayerP = {0.0f, 0.0f};
 
   if(globalGameControllerInputCurrent.moveUp.isDown) {
-      vy = dPlayerP;
+      ddPlayerP.y += 1.0f;
   }
   if(globalGameControllerInputCurrent.moveDown.isDown) {
-      vy = -dPlayerP;
+      ddPlayerP.y = -1.0f;
   }
   if(globalGameControllerInputCurrent.moveRight.isDown) {
-      vx = dPlayerP;
+      ddPlayerP.x += 1.0f;
   }
   if(globalGameControllerInputCurrent.moveLeft.isDown) {
-      vx = -dPlayerP;
+      ddPlayerP.x -= 1.0f;
   }
 
+  if((ddPlayerP.x != 0.0f) && (ddPlayerP.y != 0.0f))
+  {
+    ddPlayerP *= 0.707186781197f;
+  }
+
+  f32 baseAcceleration = 20.0f;
+
+  ddPlayerP *= baseAcceleration;
+
+  // Add "Friction"
+  ddPlayerP += -2.5f*globalGameState.dPlayerP;
+
+  // TODO
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
-  f32 dx = vx * dt;
-  f32 dy = vy * dt;
-  globalGameState.playerPosition.x += dx;
-  globalGameState.playerPosition.y += dy;
+
+
+  V2 newPlayerP = globalGameState.playerP + 0.5f*ddPlayerP*square(dt) + globalGameState.dPlayerP * dt;
+  V2 newDPlayerP = ddPlayerP * dt + globalGameState.dPlayerP;
 
   // Collision with level boundaries
   f32 playerMaxX = levelWidthInMeters - playerWidthInMeters;
   f32 playerMinX = 0;
   f32 playerMaxY = levelHeightInMeters - playerHeightInMeters;
   f32 playerMinY = 0;
-  if(globalGameState.playerPosition.x > playerMaxX) {
-      globalGameState.playerPosition.x = playerMaxX;
+  if(newPlayerP.x > playerMaxX) {
+      newPlayerP.x = playerMaxX;
+      newDPlayerP = {0, 0};
   }
-  if(globalGameState.playerPosition.x < playerMinX) {
-      globalGameState.playerPosition.x = playerMinX;
+  if(globalGameState.playerP.x < playerMinX) {
+      newPlayerP.x = playerMinX;
+      newDPlayerP.x = 0;
   }
-  if(globalGameState.playerPosition.y > playerMaxY) {
-      globalGameState.playerPosition.y = playerMaxY;
+  if(globalGameState.playerP.y > playerMaxY) {
+      newPlayerP.y = playerMaxY;
+      newDPlayerP = {0, 0};
   }
-  if(globalGameState.playerPosition.y < playerMinY) {
-      globalGameState.playerPosition.y = playerMinY;
+  if(globalGameState.playerP.y < playerMinY) {
+      newPlayerP.y = playerMinY;
+      newDPlayerP = {0, 0};
   }
+
+  globalGameState.playerP = newPlayerP;
+  globalGameState.dPlayerP = newDPlayerP;
 
   //TODO: initialize shader frames
   ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
   TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
 
-  Position positionInPixels;
-  positionInPixels.x = globalGameState.playerPosition.x * metersToPixels;
-  positionInPixels.y = globalGameState.playerPosition.y * metersToPixels;
+  V2 positionInPixels = globalGameState.playerP * metersToPixels;
 
   f32 minX = positionInPixels.x;
   f32 minY = positionInPixels.y;

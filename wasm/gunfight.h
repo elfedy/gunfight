@@ -21,16 +21,13 @@ typedef long bool32;
 #define assert(expression) if(!(expression)) { __builtin_trap(); }
 
 #include "gunfight_imports.h"
+#include "gunfight_math.h"
 
 
 // GAME STATE 
-struct Position {
-  f32 x;
-  f32 y;
-};
-
 struct GameState {
-  Position playerPosition;
+  V2 playerP;
+  V2 dPlayerP;
 }; 
 
 

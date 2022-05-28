@@ -6,7 +6,7 @@ process.on('uncaughtException', err => console.error('uncaught exception', err))
 process.on('unhandledRejection', err => console.error('unhandled rejection', err));
 
 const publicFolder = process.argv.length > 2 ? process.argv[2] : '.';
-const port = process.argv.length > 3 ? process.argv[3] : 8080;
+const port = process.argv.length > 3 ? process.argv[3] : 8089;
 
 const mediaTypes = {
   png: 'image/png',
