@@ -78,44 +78,8 @@ void bufferPushf32(Buffer *buffer, f32 value) {
     buffer->offset += sizeof(f32);
 }
 
-// SHADER FRAMES
-ColorShaderFrame colorShaderFrameInit() {
-    ColorShaderFrame ret = {};
-    ret.trianglesCount = 0;
+#include "gunfight_shaders.h"
 
-    Buffer aPositionBuffer = {};
-    aPositionBuffer.current = getBufferBase(INDEX_COLOR_SHADER_A_POSITION);
-    aPositionBuffer.offset = 0;
-
-    ret.aPositionBuffer = aPositionBuffer;
-
-    Buffer uColorsBuffer = {};
-    uColorsBuffer.current = getBufferBase(INDEX_COLOR_SHADER_U_COLOR);
-    uColorsBuffer.offset = 0;
-
-    ret.uColorsBuffer = uColorsBuffer;
-
-    return ret;
-}
-
-TextureShaderFrame textureShaderFrameInit() {
-    TextureShaderFrame ret = {};
-    ret.trianglesCount = 0;
-
-    Buffer aPositionBuffer = {};
-    aPositionBuffer.current = getBufferBase(INDEX_TEXTURE_SHADER_A_POSITION);
-    aPositionBuffer.offset = 0;
-
-    Buffer aTexCoordBuffer = {};
-
-    aTexCoordBuffer.current = getBufferBase(INDEX_TEXTURE_SHADER_A_TEX_COORD);
-    aTexCoordBuffer.offset = 0;
-
-    ret.aPositionBuffer = aPositionBuffer;
-    ret.aTexCoordBuffer = aTexCoordBuffer;
-
-    return ret;
-}
 
 // CONTROLLER
 extern "C"
@@ -123,83 +87,6 @@ export void processControllerInput(u32 keyIndex, bool32 isDown) {
     GameButtonState *buttonState = &globalGameControllerInputCurrent.buttons[keyIndex];
     buttonState->isDown = isDown;
 }
-
-// DRAW
-internal void colorShaderDrawRectangle(
-        ColorShaderFrame *colorShaderFrame,
-        Color color,
-        f32 minX,
-        f32 minY,
-        f32 maxX,
-        f32 maxY
-) {
-  f32 vertices[12] = {
-    minX, minY,
-    minX, maxY,
-    maxX, maxY,
-    minX, minY,
-    maxX, minY,
-    maxX, maxY,
-  };
-
-  Buffer *aPositionBuffer = &colorShaderFrame->aPositionBuffer;
-  Buffer *uColorsBuffer = &colorShaderFrame->uColorsBuffer;
-
-  for(int i = 0; i < arrayLength(vertices); i++) {
-    bufferPushf32(aPositionBuffer, vertices[i]);
-  }
-
-  // every three vertices pairs (triangle) we need to specify color and increment triangles
-  // count
-  for(int i = 0; i < arrayLength(vertices)/6; i++) {
-    bufferPushf32(uColorsBuffer, color.r);
-    bufferPushf32(uColorsBuffer, color.g);
-    bufferPushf32(uColorsBuffer, color.b);
-    bufferPushf32(uColorsBuffer, color.a);
-
-    colorShaderFrame->trianglesCount++;
-  }
-}
-
-internal void textureShaderDrawPlayer(
-    TextureShaderFrame *textureShaderFrame,
-    f32 minX,
-    f32 minY,
-    f32 maxX,
-    f32 maxY
-) {
-  f32 aPositionVals[12] = {
-    minX, minY,
-    maxX, minY,
-    minX, maxY,
-    minX, maxY,
-    maxX, minY,
-    maxX, maxY,
-  };
-
-  f32 aTexCoordVals[12] = {
-      0.0f,  0.0f,
-      1.0f,  0.0f,
-      0.0f,  1.0f,
-      0.0f,  1.0f,
-      1.0f,  0.0f,
-      1.0f,  1.0f
-  };
-
-  Buffer *aPositionBuffer = &textureShaderFrame->aPositionBuffer;
-  Buffer *aTexCoordBuffer = &textureShaderFrame->aTexCoordBuffer;
-
-  for(int i = 0; i < arrayLength(aPositionVals); i++) {
-    bufferPushf32(aPositionBuffer, aPositionVals[i]);
-  }
-
-  for(int i = 0; i < arrayLength(aTexCoordVals); i++) {
-    bufferPushf32(aTexCoordBuffer, aTexCoordVals[i]);
-  }
-
-  textureShaderFrame->trianglesCount += 2;
-}
-
 
 // RENDER
 
@@ -224,10 +111,24 @@ export void updateAndRender(f64 timestamp) {
   if(!globalIsInitialized) {
     globalGameState.playerP = {1.0f, 5.0f};
     globalGameState.dPlayerP = {};
+
+    for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
+      globalGameState.playerBullets[i] = {
+        {50, 50},
+        {0, 0},
+        0
+      };
+    }
+
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
   }
 
+  // Initialize Shader Frames
+  ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
+  TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
+
+  // Compute Player Movement
   V2 ddPlayerP = {0.0f, 0.0f};
 
   if(globalGameControllerInputCurrent.moveUp.isDown) {
@@ -255,9 +156,7 @@ export void updateAndRender(f64 timestamp) {
   // Add "Friction"
   ddPlayerP += -2.5f*globalGameState.dPlayerP;
 
-  // TODO
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
-
 
   V2 newPlayerP = globalGameState.playerP + 0.5f*ddPlayerP*square(dt) + globalGameState.dPlayerP * dt;
   V2 newDPlayerP = ddPlayerP * dt + globalGameState.dPlayerP;
@@ -287,10 +186,6 @@ export void updateAndRender(f64 timestamp) {
   globalGameState.playerP = newPlayerP;
   globalGameState.dPlayerP = newDPlayerP;
 
-  //TODO: initialize shader frames
-  ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
-  TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
-
   V2 positionInPixels = globalGameState.playerP * metersToPixels;
 
   f32 minX = positionInPixels.x;
@@ -300,6 +195,39 @@ export void updateAndRender(f64 timestamp) {
 
   textureShaderDrawPlayer(&textureShaderFrame, minX, minY, maxX, maxY);
 
+  // Bullets
+  bool32 actionButtonToggledDown = 
+    globalGameControllerInputCurrent.action.isDown && !globalGameControllerInputLastFrame.action.isDown;
+
+  if(actionButtonToggledDown) {
+    for(int i = 0; i < arrayLength(globalGameState.playerBullets); i++) {
+      Bullet *currentBullet = &globalGameState.playerBullets[i];
+      if(!currentBullet->firing) {
+        currentBullet->firing = 1;
+        currentBullet->p = globalGameState.playerP;
+        currentBullet->dP = {100, 0};
+        break;
+      }
+    }
+  }
+
+  for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
+    Bullet currentBullet = globalGameState.playerBullets[i];
+
+    if(currentBullet.firing) {
+      Color color = {1.0f, 1.0f, 1.0f, 1};
+      // TODO: pasar esto a vectores
+      f32 bulletWidthInMeters = 0.2f; 
+      f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
+      V2 min = currentBullet.p * metersToPixels;
+      V2 relTopRight = {bulletWidthInPixels, bulletWidthInPixels};
+      V2 bulletTopRight = min + relTopRight;
+
+      colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
+    }
+  }
+
+  // Update globals
   globalColorShaderFrameTrianglesCount = colorShaderFrame.trianglesCount; 
   globalTextureShaderFrameTrianglesCount = textureShaderFrame.trianglesCount; 
 

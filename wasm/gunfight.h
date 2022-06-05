@@ -23,13 +23,23 @@ typedef long bool32;
 #include "gunfight_imports.h"
 #include "gunfight_math.h"
 
+// ENTITIES
+struct Bullet {
+  V2 p;
+  V2 dP;
+  bool32 firing;
+};
 
 // GAME STATE 
 struct GameState {
   V2 playerP;
   V2 dPlayerP;
-}; 
 
+  Bullet playerBullets[3];
+  
+  u32 playerBulletCount;
+  f64 playerBulletLastFired;
+}; 
 
 // CONTROLLER
 struct GameButtonState
@@ -61,21 +71,6 @@ struct Buffer {
 };
 
 // RENDERING
-
-// Data about what the color shader should draw on the next frame
-struct ColorShaderFrame {
-  u32 trianglesCount;
-  Buffer aPositionBuffer;
-  Buffer uColorsBuffer;
-};
-
-// Data for the texture shader to draw on the current frame
-struct TextureShaderFrame {
-  u32 trianglesCount;
-  Buffer aPositionBuffer;
-  Buffer aTexCoordBuffer;
-}; 
-
 struct Color {
   f32 r;
   f32 g;
