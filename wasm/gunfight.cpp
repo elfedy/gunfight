@@ -19,7 +19,6 @@ global_variable u32 globalTextureShaderFrameTrianglesCount = 0;
 
 // GLOBAL BUFFERS
 
-
 // Define indices for each buffer
 enum bufferIndex {
     // Color shader vertex positions to be drawn next frame
@@ -100,6 +99,9 @@ export void updateAndRender(f64 timestamp) {
   f32 playerHeightInMeters = 1.6f;
   f32 playerWidthInMeters = 1.6f;
 
+  f32 enemyHeightInMeters = 1.6f;
+  f32 enemyWidthInMeters = 1.6f;
+
   f32 levelHeightInMeters = 13.5f;
   f32 levelWidthInMeters = 24.0f;
 
@@ -108,13 +110,28 @@ export void updateAndRender(f64 timestamp) {
   f32 playerWidthInPixels = playerWidthInMeters * metersToPixels;
   f32 playerHeightInPixels = playerHeightInMeters * metersToPixels;
 
+  f32 enemyWidthInPixels = enemyWidthInMeters * metersToPixels;
+  f32 enemyHeightInPixels = enemyHeightInMeters * metersToPixels;
+
   if(!globalIsInitialized) {
     globalGameState.playerP = {1.0f, 5.0f};
     globalGameState.dPlayerP = {};
+    globalGameState.enemiesIndex = 0;
+    globalGameState.enemyLastSpawned = timestamp;
 
+    // clear all bullets to not firing
     for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
       globalGameState.playerBullets[i] = {
         {50, 50},
+        {0, 0},
+        0
+      };
+    }
+    
+    // clear all enemies to not spawned
+    for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
+      globalGameState.enemies[i] = {
+        {0, 0},
         {0, 0},
         0
       };
@@ -192,6 +209,54 @@ export void updateAndRender(f64 timestamp) {
 
   textureShaderDrawPlayer(&textureShaderFrame, minPlayerRect, maxPlayerRect);
 
+
+  // Update Enemies
+  for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
+    Enemy *currentEnemy = &globalGameState.enemies[i];
+
+    if(currentEnemy->hasSpawned) {
+      // Compute Enemy Movement
+      V2 ddEnemyP = {0.0f, -2.0f};
+      V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, ddEnemyP, dt);
+      V2 newDEnemyP = computeNewVelocity(currentEnemy->dP, ddEnemyP, dt);
+
+      logFloat32(currentEnemy->p.x);
+      logFloat32(newEnemyP.x);
+      if(newEnemyP.x > 0) {
+        currentEnemy->p = newEnemyP;
+        currentEnemy->dP = newDEnemyP;
+      } else {
+        currentEnemy->hasSpawned = false;
+      }
+    }
+  }
+  
+  // Spawn Enemies
+  if(timestamp - globalGameState.enemyLastSpawned > seconds(2)) {
+    Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
+    currentEnemy->hasSpawned = true;
+    currentEnemy->p = { levelWidthInMeters - 1, levelHeightInMeters / 2 };
+    currentEnemy->dP = { -30, 0 };
+    globalGameState.enemiesIndex++;
+    globalGameState.enemyLastSpawned = timestamp;
+  }
+
+  // Render Enemies
+  for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
+    Enemy *currentEnemy = &globalGameState.enemies[i];
+
+    if(currentEnemy->hasSpawned) {
+        // render;
+        Color color = {0.0f, 1.0f, 1.0f, 1.0f};
+        V2 min = currentEnemy->p * metersToPixels;
+        V2 relTopRight = {enemyWidthInPixels, enemyWidthInPixels};
+        V2 enemyTopRight = min + relTopRight;
+
+        colorShaderDrawRectangle(&colorShaderFrame, color, min, enemyTopRight);
+    }
+  }
+  
+
   // Bullets
   bool32 actionButtonToggledDown = 
     globalGameControllerInputCurrent.action.isDown && !globalGameControllerInputLastFrame.action.isDown;
@@ -210,16 +275,6 @@ export void updateAndRender(f64 timestamp) {
       if(newBulletP.x < levelWidthInMeters) {
         currentBullet->p = newBulletP;
         currentBullet->dP = newDBulletP;
-
-        // render;
-        Color color = {1.0f, 1.0f, 1.0f, 1};
-        f32 bulletWidthInMeters = 0.2f; 
-        f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
-        V2 min = currentBullet->p * metersToPixels;
-        V2 relTopRight = {bulletWidthInPixels, bulletWidthInPixels};
-        V2 bulletTopRight = min + relTopRight;
-
-        colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
       } else {
         currentBullet->firing = false;
       }

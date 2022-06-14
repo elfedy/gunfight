@@ -1,7 +1,7 @@
 #if !defined(GUNFIGHT_IMPORTS)
 
 // ENV IMPORTS
-void logFloat32(f32 val);
+extern "C" void logFloat32(f32 number);
 
 extern u8 *__heap_base;
 

@@ -18,6 +18,8 @@ typedef long bool32;
 #define megabytes(value) (kilobytes(value)*1024LL)
 #define gigabytes(value) (megabytes(value)*1024LL)
 
+#define seconds(value) (value * 1000)
+
 #define assert(expression) if(!(expression)) { __builtin_trap(); }
 
 #include "gunfight_imports.h"
@@ -30,6 +32,12 @@ struct Bullet {
   bool32 firing;
 };
 
+struct Enemy {
+  V2 p;
+  V2 dP;
+  bool32 hasSpawned;
+};
+
 // GAME STATE 
 struct GameState {
   V2 playerP;
@@ -37,6 +45,11 @@ struct GameState {
 
   Bullet playerBullets[3];
   
+
+  f64 enemyLastSpawned;
+  u32 enemiesIndex;
+  Enemy enemies[20];
+
   u32 playerBulletCount;
   f64 playerBulletLastFired;
 }; 
