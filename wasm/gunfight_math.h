@@ -75,6 +75,18 @@ square(f32 a)
 
   return result;
 }
+
+// MOVEMENT
+V2 computeNewPosition(V2 initialP, V2 dP, V2 ddP, f32 dt) {
+  V2 newP = initialP + 0.5f*ddP*square(dt) + dP * dt;
+  return newP;
+}
+
+V2 computeNewVelocity(V2 initialDP, V2 ddP, f32 dt) {
+  V2 newDP = ddP * dt + initialDP;
+  return newDP;
+}
+
 #define GUNFIGHT_MATH_H
 #endif
 

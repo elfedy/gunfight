@@ -128,6 +128,8 @@ export void updateAndRender(f64 timestamp) {
   ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
   TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
 
+  f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
+
   // Compute Player Movement
   V2 ddPlayerP = {0.0f, 0.0f};
 
@@ -150,16 +152,13 @@ export void updateAndRender(f64 timestamp) {
   }
 
   f32 baseAcceleration = 20.0f;
-
   ddPlayerP *= baseAcceleration;
-
   // Add "Friction"
   ddPlayerP += -2.5f*globalGameState.dPlayerP;
 
-  f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
 
-  V2 newPlayerP = globalGameState.playerP + 0.5f*ddPlayerP*square(dt) + globalGameState.dPlayerP * dt;
-  V2 newDPlayerP = ddPlayerP * dt + globalGameState.dPlayerP;
+  V2 newPlayerP = computeNewPosition(globalGameState.playerP, globalGameState.dPlayerP, ddPlayerP, dt);
+  V2 newDPlayerP = computeNewVelocity(globalGameState.dPlayerP, ddPlayerP, dt);
 
   // Collision with level boundaries
   f32 playerMaxX = levelWidthInMeters - playerWidthInMeters;
@@ -186,44 +185,77 @@ export void updateAndRender(f64 timestamp) {
   globalGameState.playerP = newPlayerP;
   globalGameState.dPlayerP = newDPlayerP;
 
-  V2 positionInPixels = globalGameState.playerP * metersToPixels;
+  V2 playerPInPixels = globalGameState.playerP * metersToPixels;
 
-  f32 minX = positionInPixels.x;
-  f32 minY = positionInPixels.y;
-  f32 maxX = positionInPixels.x + playerWidthInPixels;
-  f32 maxY = positionInPixels.y + playerHeightInPixels;
+  V2 minPlayerRect = playerPInPixels;
+  V2 maxPlayerRect = playerPInPixels + V2{playerWidthInPixels, playerHeightInPixels};
 
-  textureShaderDrawPlayer(&textureShaderFrame, minX, minY, maxX, maxY);
+  textureShaderDrawPlayer(&textureShaderFrame, minPlayerRect, maxPlayerRect);
 
   // Bullets
   bool32 actionButtonToggledDown = 
     globalGameControllerInputCurrent.action.isDown && !globalGameControllerInputLastFrame.action.isDown;
+
+
+  // Update player bullets
+  for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
+    Bullet *currentBullet = &globalGameState.playerBullets[i];
+
+    if(currentBullet->firing) {
+      // Compute Bullet Movement
+      V2 ddBulletP = {0.0f, 0.0f};
+      V2 newBulletP = computeNewPosition(currentBullet->p, currentBullet->dP, ddBulletP, dt);
+      V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
+
+      if(newBulletP.x < levelWidthInMeters) {
+        currentBullet->p = newBulletP;
+        currentBullet->dP = newDBulletP;
+
+        // render;
+        Color color = {1.0f, 1.0f, 1.0f, 1};
+        f32 bulletWidthInMeters = 0.2f; 
+        f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
+        V2 min = currentBullet->p * metersToPixels;
+        V2 relTopRight = {bulletWidthInPixels, bulletWidthInPixels};
+        V2 bulletTopRight = min + relTopRight;
+
+        colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
+      } else {
+        currentBullet->firing = false;
+      }
+    }
+  }
+
+  // Fire new player Bullets
+  f32 bulletWidthInMeters = 0.2f; 
+  f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
 
   if(actionButtonToggledDown) {
     for(int i = 0; i < arrayLength(globalGameState.playerBullets); i++) {
       Bullet *currentBullet = &globalGameState.playerBullets[i];
       if(!currentBullet->firing) {
         currentBullet->firing = 1;
-        currentBullet->p = globalGameState.playerP;
-        currentBullet->dP = {100, 0};
+        currentBullet->p = globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters*0.375f - bulletWidthInMeters/2};
+        currentBullet->dP = {30, 0};
         break;
       }
     }
   }
 
+  // Render player bullets
   for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
-    Bullet currentBullet = globalGameState.playerBullets[i];
+    Bullet *currentBullet = &globalGameState.playerBullets[i];
 
-    if(currentBullet.firing) {
-      Color color = {1.0f, 1.0f, 1.0f, 1};
-      // TODO: pasar esto a vectores
-      f32 bulletWidthInMeters = 0.2f; 
-      f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
-      V2 min = currentBullet.p * metersToPixels;
-      V2 relTopRight = {bulletWidthInPixels, bulletWidthInPixels};
-      V2 bulletTopRight = min + relTopRight;
+    if(currentBullet->firing) {
+      if(currentBullet->p.x < levelWidthInMeters) {
+        // render;
+        Color color = {1.0f, 1.0f, 1.0f, 1};
+        V2 min = currentBullet->p * metersToPixels;
+        V2 relTopRight = {bulletWidthInPixels, bulletWidthInPixels};
+        V2 bulletTopRight = min + relTopRight;
 
-      colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
+        colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
+      }
     }
   }
 

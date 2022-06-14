@@ -87,18 +87,16 @@ internal void colorShaderDrawRectangle(
 
 internal void textureShaderDrawPlayer(
     TextureShaderFrame *textureShaderFrame,
-    f32 minX,
-    f32 minY,
-    f32 maxX,
-    f32 maxY
+    V2 min,
+    V2 max
 ) {
   f32 aPositionVals[12] = {
-    minX, minY,
-    maxX, minY,
-    minX, maxY,
-    minX, maxY,
-    maxX, minY,
-    maxX, maxY,
+    min.x, min.y,
+    max.x, min.y,
+    min.x, max.y,
+    min.x, max.y,
+    max.x, min.y,
+    max.x, max.y,
   };
 
   f32 aTexCoordVals[12] = {
