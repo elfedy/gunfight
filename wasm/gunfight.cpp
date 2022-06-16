@@ -72,7 +72,7 @@ export u32 textureShaderGetTrianglesCount() {
 }
 
 internal
-void bufferPushf32(Buffer *buffer, f32 value) {
+void bufferPushF32(Buffer *buffer, f32 value) {
     *((f32 *)(buffer->current + buffer->offset)) = value;
     buffer->offset += sizeof(f32);
 }
@@ -207,16 +207,17 @@ export void updateAndRender(f64 timestamp) {
   V2 minPlayerRect = playerPInPixels;
   V2 maxPlayerRect = playerPInPixels + V2{playerWidthInPixels, playerHeightInPixels};
 
-  textureShaderDrawPlayer(&textureShaderFrame, minPlayerRect, maxPlayerRect);
+  textureShaderDrawTexture(&textureShaderFrame, PLAYER, minPlayerRect, maxPlayerRect);
 
 
+  // ENEMIES
   // Update Enemies
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
     Enemy *currentEnemy = &globalGameState.enemies[i];
 
     if(currentEnemy->hasSpawned) {
       // Compute Enemy Movement
-      V2 ddEnemyP = {0.0f, -2.0f};
+      V2 ddEnemyP = {-2.0f, 0};
       V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, ddEnemyP, dt);
       V2 newDEnemyP = computeNewVelocity(currentEnemy->dP, ddEnemyP, dt);
 
@@ -236,7 +237,7 @@ export void updateAndRender(f64 timestamp) {
     Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
     currentEnemy->hasSpawned = true;
     currentEnemy->p = { levelWidthInMeters - 1, levelHeightInMeters / 2 };
-    currentEnemy->dP = { -30, 0 };
+    currentEnemy->dP = { 0, 0 };
     globalGameState.enemiesIndex++;
     globalGameState.enemyLastSpawned = timestamp;
   }
@@ -257,7 +258,7 @@ export void updateAndRender(f64 timestamp) {
   }
   
 
-  // Bullets
+  // BULLETS
   bool32 actionButtonToggledDown = 
     globalGameControllerInputCurrent.action.isDown && !globalGameControllerInputLastFrame.action.isDown;
 

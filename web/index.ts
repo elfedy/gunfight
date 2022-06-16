@@ -7,18 +7,24 @@ const GlobalConfig = {
 let wasmMemory = new WebAssembly.Memory({initial: 160, maximum: 160});
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
 
-let playerImage = new Image();
+let spriteAtlas = new Image();
 let context = {
   wasm: null,
   images: [],
   loadedImages: 0,
+  spriteConfig: null,
 }
 
-playerImage.onload = () =>  {
-  context.images.push(playerImage);
+spriteAtlas.onload = () =>  {
+  context.images.push(spriteAtlas);
   context.loadedImages++;
 };
-playerImage.src = 'player.png';
+spriteAtlas.src = 'sprite_atlas.png';
+
+fetch('sprite_atlas.json')
+  .then(spriteAtlasResponse => spriteAtlasResponse.json())
+  .then(json => context.spriteConfig = json)
+  .catch(e => console.error("Error fetching sprite config: " + e));
 
 WebAssembly.instantiateStreaming(
   fetch('gunfight.wasm'),
@@ -41,7 +47,7 @@ WebAssembly.instantiateStreaming(
 });
 
 function waitForInitialization() {
-  if(context.wasm !== null && context.loadedImages === 1) {
+  if(context.wasm !== null && context.loadedImages === 1 && context.spriteConfig !== null) {
     initializeGameLoop(context);
   } else {
     setTimeout(waitForInitialization, 100);

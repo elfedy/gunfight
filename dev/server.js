@@ -12,6 +12,7 @@ const mediaTypes = {
   png: 'image/png',
   html: 'text/html',
   wasm: 'application/wasm',
+  json: 'application/json',
 };
 
 const server = http.createServer(function(request, response) {

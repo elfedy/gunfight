@@ -14,4 +14,4 @@ mkdir -p build
 ./build_wasm.sh
 
 # Copy assets
-cp assets/*png build/
+cp assets/* build/

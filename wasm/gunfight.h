@@ -25,6 +25,12 @@ typedef long bool32;
 #include "gunfight_imports.h"
 #include "gunfight_math.h"
 
+// ENUMS
+enum textureIndex {
+  PLAYER,
+  ENEMY_SHOOTER
+};
+
 // ENTITIES
 struct Bullet {
   V2 p;
