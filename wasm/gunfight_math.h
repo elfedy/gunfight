@@ -87,6 +87,22 @@ V2 computeNewVelocity(V2 initialDP, V2 ddP, f32 dt) {
   return newDP;
 }
 
+// COLLISION
+bool32 rectanglesAreColliding(
+    V2 aBottomLeft,
+    V2 aTopRight,
+    V2 bBottomLeft,
+    V2 bTopRight
+) {
+  bool32 collidingOnXAxis = 
+    !(aTopRight.x <= bBottomLeft.x || aBottomLeft.x >= bTopRight.x);
+  bool32 collidingOnYAxis = 
+    !(aTopRight.y <= bBottomLeft.y || aBottomLeft.y >= bTopRight.y);
+  
+  bool32 result = collidingOnXAxis && collidingOnYAxis;
+  return result;
+}
+
 #define GUNFIGHT_MATH_H
 #endif
 

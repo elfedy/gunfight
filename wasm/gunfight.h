@@ -41,7 +41,7 @@ struct Bullet {
 struct Enemy {
   V2 p;
   V2 dP;
-  bool32 hasSpawned;
+  bool32 active;
 };
 
 // GAME STATE 

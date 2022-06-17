@@ -214,7 +214,7 @@ export void updateAndRender(f64 timestamp) {
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
     Enemy *currentEnemy = &globalGameState.enemies[i];
 
-    if(currentEnemy->hasSpawned) {
+    if(currentEnemy->active) {
       // Compute Enemy Movement
       V2 ddEnemyP = {-2.0f, 0};
       V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, ddEnemyP, dt);
@@ -224,7 +224,67 @@ export void updateAndRender(f64 timestamp) {
         currentEnemy->p = newEnemyP;
         currentEnemy->dP = newDEnemyP;
       } else {
-        currentEnemy->hasSpawned = false;
+        currentEnemy->active = false;
+      }
+    }
+  }
+
+  // Update player bullets
+  // TODO(fede): move these definitions somwhere else
+  f32 bulletWidthInMeters = 0.2f; 
+  f32 bulletHeightInMeters = 0.2f; 
+  f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
+  f32 bulletHeightInPixels = bulletHeightInMeters * metersToPixels;
+
+  for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
+    Bullet *currentBullet = &globalGameState.playerBullets[i];
+
+    if(currentBullet->firing) {
+      // Compute Bullet Movement
+      V2 ddBulletP = {0.0f, 0.0f};
+      V2 newBulletP = computeNewPosition(currentBullet->p, currentBullet->dP, ddBulletP, dt);
+      V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
+
+      // Collision with enemies
+      bool32 hasCollidedWithEnemy = false;
+      // NOTE(fede): The leftmost enemy is the one that is considered that collided
+      Enemy *collidedEnemy;
+
+      for(int i = 0; i < arrayLength(globalGameState.enemies); i++) {
+        Enemy *enemy = &globalGameState.enemies[i];
+        if(enemy->active) {
+          V2 enemyTopRight = 
+            enemy->p + V2{enemyWidthInMeters, enemyHeightInMeters};
+          V2 bulletTopRight =
+            newBulletP + V2{bulletWidthInMeters, bulletHeightInMeters};
+          bool32 collided = 
+            rectanglesAreColliding(
+                enemy->p, enemyTopRight, newBulletP, bulletTopRight);
+
+          if(collided) {
+            if(!hasCollidedWithEnemy) {
+              hasCollidedWithEnemy = true;
+              collidedEnemy = enemy;
+            } else {
+              if(collidedEnemy->p.x > enemy->p.x) {
+                collidedEnemy = enemy;
+              }
+            }
+          }
+        }
+      }
+
+      if(hasCollidedWithEnemy) {
+        currentBullet->firing = false;
+        collidedEnemy->active = false;
+      } else {
+        // "Collision" with right wall
+        if(newBulletP.x < levelWidthInMeters) {
+          currentBullet->p = newBulletP;
+          currentBullet->dP = newDBulletP;
+        } else {
+          currentBullet->firing = false;
+        }
       }
     }
   }
@@ -232,7 +292,7 @@ export void updateAndRender(f64 timestamp) {
   // Spawn Enemies
   if(timestamp - globalGameState.enemyLastSpawned > seconds(2)) {
     Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
-    currentEnemy->hasSpawned = true;
+    currentEnemy->active = true;
     currentEnemy->p = { levelWidthInMeters - 1, levelHeightInMeters / 2 };
     currentEnemy->dP = { 0, 0 };
     globalGameState.enemiesIndex++;
@@ -243,7 +303,7 @@ export void updateAndRender(f64 timestamp) {
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
     Enemy *currentEnemy = &globalGameState.enemies[i];
 
-    if(currentEnemy->hasSpawned) {
+    if(currentEnemy->active) {
         // render;
         Color color = {0.0f, 1.0f, 1.0f, 1.0f};
         V2 bottomLeft = currentEnemy->p * metersToPixels;
@@ -254,33 +314,12 @@ export void updateAndRender(f64 timestamp) {
     }
   }
 
-  // BULLETS
-  bool32 actionButtonToggledDown = 
-    globalGameControllerInputCurrent.action.isDown && !globalGameControllerInputLastFrame.action.isDown;
 
 
-  // Update player bullets
-  for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
-    Bullet *currentBullet = &globalGameState.playerBullets[i];
-
-    if(currentBullet->firing) {
-      // Compute Bullet Movement
-      V2 ddBulletP = {0.0f, 0.0f};
-      V2 newBulletP = computeNewPosition(currentBullet->p, currentBullet->dP, ddBulletP, dt);
-      V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
-
-      if(newBulletP.x < levelWidthInMeters) {
-        currentBullet->p = newBulletP;
-        currentBullet->dP = newDBulletP;
-      } else {
-        currentBullet->firing = false;
-      }
-    }
-  }
 
   // Fire new player Bullets
-  f32 bulletWidthInMeters = 0.2f; 
-  f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
+  bool32 actionButtonToggledDown = 
+    globalGameControllerInputCurrent.action.isDown && !globalGameControllerInputLastFrame.action.isDown;
 
   if(actionButtonToggledDown) {
     for(int i = 0; i < arrayLength(globalGameState.playerBullets); i++) {
@@ -303,7 +342,7 @@ export void updateAndRender(f64 timestamp) {
         // render;
         Color color = {1.0f, 1.0f, 1.0f, 1};
         V2 min = currentBullet->p * metersToPixels;
-        V2 relTopRight = {bulletWidthInPixels, bulletWidthInPixels};
+        V2 relTopRight = {bulletWidthInPixels, bulletHeightInPixels};
         V2 bulletTopRight = min + relTopRight;
 
         colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
