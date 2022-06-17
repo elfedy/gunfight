@@ -209,7 +209,6 @@ export void updateAndRender(f64 timestamp) {
 
   textureShaderDrawTexture(&textureShaderFrame, PLAYER, minPlayerRect, maxPlayerRect);
 
-
   // ENEMIES
   // Update Enemies
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
@@ -221,8 +220,6 @@ export void updateAndRender(f64 timestamp) {
       V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, ddEnemyP, dt);
       V2 newDEnemyP = computeNewVelocity(currentEnemy->dP, ddEnemyP, dt);
 
-      logFloat32(currentEnemy->p.x);
-      logFloat32(newEnemyP.x);
       if(newEnemyP.x > 0) {
         currentEnemy->p = newEnemyP;
         currentEnemy->dP = newDEnemyP;
@@ -249,14 +246,13 @@ export void updateAndRender(f64 timestamp) {
     if(currentEnemy->hasSpawned) {
         // render;
         Color color = {0.0f, 1.0f, 1.0f, 1.0f};
-        V2 min = currentEnemy->p * metersToPixels;
+        V2 bottomLeft = currentEnemy->p * metersToPixels;
         V2 relTopRight = {enemyWidthInPixels, enemyWidthInPixels};
-        V2 enemyTopRight = min + relTopRight;
+        V2 enemyTopRight = bottomLeft + relTopRight;
 
-        colorShaderDrawRectangle(&colorShaderFrame, color, min, enemyTopRight);
+        textureShaderDrawTexture(&textureShaderFrame, ENEMY_SHOOTER, bottomLeft, enemyTopRight);
     }
   }
-  
 
   // BULLETS
   bool32 actionButtonToggledDown = 

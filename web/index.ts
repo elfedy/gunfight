@@ -12,7 +12,6 @@ let context = {
   wasm: null,
   images: [],
   loadedImages: 0,
-  spriteConfig: null,
 }
 
 spriteAtlas.onload = () =>  {
@@ -21,10 +20,6 @@ spriteAtlas.onload = () =>  {
 };
 spriteAtlas.src = 'sprite_atlas.png';
 
-fetch('sprite_atlas.json')
-  .then(spriteAtlasResponse => spriteAtlasResponse.json())
-  .then(json => context.spriteConfig = json)
-  .catch(e => console.error("Error fetching sprite config: " + e));
 
 WebAssembly.instantiateStreaming(
   fetch('gunfight.wasm'),
@@ -47,7 +42,7 @@ WebAssembly.instantiateStreaming(
 });
 
 function waitForInitialization() {
-  if(context.wasm !== null && context.loadedImages === 1 && context.spriteConfig !== null) {
+  if(context.wasm !== null && context.loadedImages === 1) {
     initializeGameLoop(context);
   } else {
     setTimeout(waitForInitialization, 100);
@@ -230,14 +225,7 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
       0, // stride: bytes between beggining of consecutive vetex attributes in buffer
       0 // offset: where to start reading data from the buffer
     );
-    let textureCoords = [
-       0.0,  0.0,
-       1.0,  0.0,
-       0.0,  1.0,
-       0.0,  1.0,
-       1.0,  0.0,
-       1.0,  1.0
-    ];
+
     // Add vertices to array buffer
     let textureShaderATexCoordBufferBase = wasm.instance.exports.getBufferBase(3);
     let textureShaderATexCoordBufferEnd = textureShaderATexCoordBufferBase + textureShaderNumberOfVertices * pointsPerVertex * bytesPerFloat32;
@@ -254,7 +242,7 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
 
     let primitiveType = gl.TRIANGLES;
     let offset = 0;
-    let count = 6;
+    let count = textureShaderNumberOfVertices;
     gl.drawArrays(primitiveType, offset, count);
   }
 
