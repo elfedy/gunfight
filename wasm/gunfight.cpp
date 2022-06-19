@@ -293,8 +293,9 @@ export void updateAndRender(f64 timestamp) {
   if(timestamp - globalGameState.enemyLastSpawned > seconds(2)) {
     Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
     currentEnemy->active = true;
-    currentEnemy->p = { levelWidthInMeters - 1, levelHeightInMeters / 2 };
-    currentEnemy->dP = { 0, 0 };
+    f32 spawnHeight = (levelHeightInMeters - enemyHeightInMeters) * envRandF32();
+    currentEnemy->p = { levelWidthInMeters - enemyWidthInMeters, spawnHeight };
+    currentEnemy->dP = { -5.0f, 0 };
     globalGameState.enemiesIndex++;
     globalGameState.enemyLastSpawned = timestamp;
   }
@@ -313,8 +314,6 @@ export void updateAndRender(f64 timestamp) {
         textureShaderDrawTexture(&textureShaderFrame, ENEMY_SHOOTER, bottomLeft, enemyTopRight);
     }
   }
-
-
 
 
   // Fire new player Bullets

@@ -29,7 +29,8 @@ WebAssembly.instantiateStreaming(
 
       logBytes: consoleLogBytes,
       logUtf8: consoleLogUtf8,
-      logFloat32: (f32) => console.log(f32),
+      envLogF32: (f32) => console.log(f32),
+      envRandF32: () => Math.random(),
       console_log_pointer: (ptr) => console.log(ptr),
       console_log_usize: (val) => console.log(val),
       get_canvas_width: getCanvasWidth,
