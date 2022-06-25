@@ -210,7 +210,6 @@ export void updateAndRender(f64 timestamp) {
   // ENEMIES
   // Update Enemies
   f32 enemyBaseAcceleration = 20.0f;
-  // TODO: jugar un poco con los params para que el movimiento quede bien
   f32 enemyMinX = 0.3f * levelWidthInMeters;
   f32 enemyMaxX = levelWidthInMeters - enemyWidthInMeters * 1.2;
 
