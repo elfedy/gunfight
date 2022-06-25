@@ -93,9 +93,6 @@ extern "C"
 export void updateAndRender(f64 timestamp) {
   //TODO(fede): This values should be more dynamic. Also how to achieve this while
   // preserving aspect ratio?
-  f32 levelHeightInPixels = 960;
-  f32 levelWidthInPixels = 540;
-
   f32 playerHeightInMeters = 1.6f;
   f32 playerWidthInMeters = 1.6f;
 
@@ -133,6 +130,7 @@ export void updateAndRender(f64 timestamp) {
       globalGameState.enemies[i] = {
         {0, 0},
         {0, 0},
+        {0, 0},
         0
       };
     }
@@ -168,8 +166,8 @@ export void updateAndRender(f64 timestamp) {
     ddPlayerP *= 0.707186781197f;
   }
 
-  f32 baseAcceleration = 20.0f;
-  ddPlayerP *= baseAcceleration;
+  f32 playerBaseAcceleration = 20.0f;
+  ddPlayerP *= playerBaseAcceleration;
   // Add "Friction"
   ddPlayerP += -2.5f*globalGameState.dPlayerP;
 
@@ -211,21 +209,32 @@ export void updateAndRender(f64 timestamp) {
 
   // ENEMIES
   // Update Enemies
+  f32 enemyBaseAcceleration = 20.0f;
+  // TODO: jugar un poco con los params para que el movimiento quede bien
+  f32 enemyMinX = 0.3f * levelWidthInMeters;
+  f32 enemyMaxX = levelWidthInMeters - enemyWidthInMeters * 1.2;
+
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
     Enemy *currentEnemy = &globalGameState.enemies[i];
 
     if(currentEnemy->active) {
       // Compute Enemy Movement
-      V2 ddEnemyP = {-2.0f, 0};
-      V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, ddEnemyP, dt);
-      V2 newDEnemyP = computeNewVelocity(currentEnemy->dP, ddEnemyP, dt);
+      // Movement AI
 
-      if(newEnemyP.x > 0) {
-        currentEnemy->p = newEnemyP;
-        currentEnemy->dP = newDEnemyP;
-      } else {
-        currentEnemy->active = false;
+      if(currentEnemy->p.x < enemyMinX) {
+        currentEnemy->intendedDirection = {1, 0};
+      } 
+      if(currentEnemy->p.x > enemyMaxX) {
+        currentEnemy->intendedDirection = {-1, 0};
       }
+      V2 currentEnemyDdP = currentEnemy->intendedDirection * enemyBaseAcceleration;
+      currentEnemyDdP += -2.5f*currentEnemy->dP;
+
+      V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, currentEnemyDdP, dt);
+      V2 newDEnemyP = computeNewVelocity(currentEnemy->dP, currentEnemyDdP, dt);
+
+      currentEnemy->p = newEnemyP;
+      currentEnemy->dP = newDEnemyP;
     }
   }
 
@@ -296,6 +305,7 @@ export void updateAndRender(f64 timestamp) {
     f32 spawnHeight = (levelHeightInMeters - enemyHeightInMeters) * envRandF32();
     currentEnemy->p = { levelWidthInMeters - enemyWidthInMeters, spawnHeight };
     currentEnemy->dP = { -5.0f, 0 };
+    currentEnemy->intendedDirection = { -1, 0};
     globalGameState.enemiesIndex++;
     globalGameState.enemyLastSpawned = timestamp;
   }

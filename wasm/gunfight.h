@@ -41,6 +41,7 @@ struct Bullet {
 struct Enemy {
   V2 p;
   V2 dP;
+  V2 intendedDirection;
   bool32 active;
 };
 
