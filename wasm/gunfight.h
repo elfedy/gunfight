@@ -55,7 +55,8 @@ struct GameState {
 
   f64 enemyLastSpawned;
   u32 enemiesIndex;
-  Enemy enemies[20];
+  u32 enemiesCurrentCount;
+  Enemy enemies[10];
 
   u32 playerBulletCount;
   f64 playerBulletLastFired;

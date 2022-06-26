@@ -114,6 +114,7 @@ export void updateAndRender(f64 timestamp) {
     globalGameState.playerP = {1.0f, 5.0f};
     globalGameState.dPlayerP = {};
     globalGameState.enemiesIndex = 0;
+    globalGameState.enemiesCurrentCount = 0;
     globalGameState.enemyLastSpawned = timestamp;
 
     // clear all bullets to not firing
@@ -238,7 +239,7 @@ export void updateAndRender(f64 timestamp) {
   }
 
   // Update player bullets
-  // TODO(fede): move these definitions somwhere else
+  // TODO(fede): move these definitions somewhere else
   f32 bulletWidthInMeters = 0.2f; 
   f32 bulletHeightInMeters = 0.2f; 
   f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
@@ -285,6 +286,7 @@ export void updateAndRender(f64 timestamp) {
       if(hasCollidedWithEnemy) {
         currentBullet->firing = false;
         collidedEnemy->active = false;
+        --globalGameState.enemiesCurrentCount;
       } else {
         // "Collision" with right wall
         if(newBulletP.x < levelWidthInMeters) {
@@ -298,15 +300,28 @@ export void updateAndRender(f64 timestamp) {
   }
   
   // Spawn Enemies
-  if(timestamp - globalGameState.enemyLastSpawned > seconds(2)) {
-    Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
-    currentEnemy->active = true;
-    f32 spawnHeight = (levelHeightInMeters - enemyHeightInMeters) * envRandF32();
-    currentEnemy->p = { levelWidthInMeters - enemyWidthInMeters, spawnHeight };
-    currentEnemy->dP = { -5.0f, 0 };
-    currentEnemy->intendedDirection = { -1, 0};
-    globalGameState.enemiesIndex++;
+  bool32 enemyBufferFull = globalGameState.enemiesCurrentCount == arrayLength(globalGameState.enemies);
+
+  if(!enemyBufferFull && timestamp - globalGameState.enemyLastSpawned > seconds(2)) {
+    // Loop until we find a not active slot to spawn the enemy
+    while(true) {
+      Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
+      globalGameState.enemiesIndex++;
+      if(globalGameState.enemiesIndex >= arrayLength(globalGameState.enemies)){
+        globalGameState.enemiesIndex = 0;
+      }
+
+      if(!currentEnemy->active) {
+        currentEnemy->active = true;
+        f32 spawnHeight = (levelHeightInMeters - enemyHeightInMeters) * envRandF32();
+        currentEnemy->p = { levelWidthInMeters - enemyWidthInMeters, spawnHeight };
+        currentEnemy->dP = { -5.0f, 0 };
+        currentEnemy->intendedDirection = { -1, 0};
+        break;
+      }
+    }
     globalGameState.enemyLastSpawned = timestamp;
+    ++globalGameState.enemiesCurrentCount;
   }
 
   // Render Enemies
