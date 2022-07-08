@@ -91,14 +91,14 @@ export void processControllerInput(u32 keyIndex, bool32 isDown) {
 
 extern "C"
 export void updateAndRender(f64 timestamp) {
-  //TODO(fede): This values should be more dynamic. Also how to achieve this while
-  // preserving aspect ratio?
+  // Dimensions
   f32 playerHeightInMeters = 1.6f;
   f32 playerWidthInMeters = 1.6f;
 
   f32 enemyHeightInMeters = 1.6f;
   f32 enemyWidthInMeters = 1.6f;
 
+  // 16:9 aspect ratio
   f32 levelHeightInMeters = 13.5f;
   f32 levelWidthInMeters = 24.0f;
 
@@ -110,31 +110,17 @@ export void updateAndRender(f64 timestamp) {
   f32 enemyWidthInPixels = enemyWidthInMeters * metersToPixels;
   f32 enemyHeightInPixels = enemyHeightInMeters * metersToPixels;
 
+  f32 bulletWidthInMeters = 0.2f; 
+  f32 bulletHeightInMeters = 0.2f; 
+  f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
+  f32 bulletHeightInPixels = bulletHeightInMeters * metersToPixels;
+
   if(!globalIsInitialized) {
     globalGameState.playerP = {1.0f, 5.0f};
     globalGameState.dPlayerP = {};
     globalGameState.enemiesIndex = 0;
     globalGameState.enemiesCurrentCount = 0;
     globalGameState.enemyLastSpawned = timestamp;
-
-    // clear all bullets to not firing
-    for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
-      globalGameState.playerBullets[i] = {
-        {50, 50},
-        {0, 0},
-        0
-      };
-    }
-    
-    // clear all enemies to not spawned
-    for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
-      globalGameState.enemies[i] = {
-        {0, 0},
-        {0, 0},
-        {0, 0},
-        0
-      };
-    }
 
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
@@ -235,15 +221,56 @@ export void updateAndRender(f64 timestamp) {
 
       currentEnemy->p = newEnemyP;
       currentEnemy->dP = newDEnemyP;
+
+      // Update bullets
+      for(int i = 0; i < arrayLength(currentEnemy->bullets); ++i) {
+        Bullet *currentBullet = &currentEnemy->bullets[i];
+
+        if(currentBullet->firing) {
+          // Compute Bullet Movement
+          V2 ddBulletP = {0.0f, 0.0f};
+          V2 newBulletP = computeNewPosition(currentBullet->p, currentBullet->dP, ddBulletP, dt);
+          V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
+
+          // Collision with Player
+          V2 playerTopRight = 
+            globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters};
+          V2 bulletTopRight =
+            newBulletP + V2{bulletWidthInMeters, bulletHeightInMeters};
+          bool32 collidedWithPlayer = 
+          rectanglesAreColliding(
+              globalGameState.playerP, playerTopRight, newBulletP, bulletTopRight);
+
+              if(collidedWithPlayer) {
+                currentBullet->firing = false;
+                // TODO: Lose a life / Die
+              } else {
+                if(newBulletP.x < levelWidthInMeters) {
+                  currentBullet->p = newBulletP;
+                  currentBullet->dP = newDBulletP;
+                } else {
+                  currentBullet->firing = false;
+                }
+              }
+          }
+      }
+
+      // Bullet AI
+      if((timestamp - currentEnemy->bulletLastFired) > seconds(1)) {
+        for(int i = 0; i < arrayLength(currentEnemy->bullets); i++) {
+          Bullet *currentBullet = &currentEnemy->bullets[i];
+          if(!currentBullet->firing) {
+            currentBullet->firing = 1;
+            currentBullet->p = currentEnemy->p + V2{0.0f, enemyHeightInMeters*0.375f - bulletWidthInMeters/2};
+            currentBullet->dP = {-30, 0};
+            break;
+          }
+        }
+      }
     }
   }
 
   // Update player bullets
-  // TODO(fede): move these definitions somewhere else
-  f32 bulletWidthInMeters = 0.2f; 
-  f32 bulletHeightInMeters = 0.2f; 
-  f32 bulletWidthInPixels = bulletWidthInMeters * metersToPixels;
-  f32 bulletHeightInPixels = bulletHeightInMeters * metersToPixels;
 
   for(int i = 0; i < arrayLength(globalGameState.playerBullets); ++i) {
     Bullet *currentBullet = &globalGameState.playerBullets[i];
@@ -302,7 +329,7 @@ export void updateAndRender(f64 timestamp) {
   // Spawn Enemies
   bool32 enemyBufferFull = globalGameState.enemiesCurrentCount == arrayLength(globalGameState.enemies);
 
-  if(!enemyBufferFull && timestamp - globalGameState.enemyLastSpawned > seconds(2)) {
+  if(!enemyBufferFull && ((timestamp - globalGameState.enemyLastSpawned) > seconds(2))) {
     // Loop until we find a not active slot to spawn the enemy
     while(true) {
       Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
@@ -317,6 +344,7 @@ export void updateAndRender(f64 timestamp) {
         currentEnemy->p = { levelWidthInMeters - enemyWidthInMeters, spawnHeight };
         currentEnemy->dP = { -5.0f, 0 };
         currentEnemy->intendedDirection = { -1, 0};
+        currentEnemy->bulletLastFired = 0;
         break;
       }
     }
@@ -328,6 +356,7 @@ export void updateAndRender(f64 timestamp) {
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
     Enemy *currentEnemy = &globalGameState.enemies[i];
 
+    // enemy
     if(currentEnemy->active) {
         // render;
         Color color = {0.0f, 1.0f, 1.0f, 1.0f};
@@ -336,6 +365,23 @@ export void updateAndRender(f64 timestamp) {
         V2 enemyTopRight = bottomLeft + relTopRight;
 
         textureShaderDrawTexture(&textureShaderFrame, ENEMY_SHOOTER, bottomLeft, enemyTopRight);
+    }
+
+    // bullets
+    for(int i = 0; i < arrayLength(currentEnemy->bullets); ++i) {
+      Bullet *currentBullet = &currentEnemy->bullets[i];
+
+      if(currentBullet->firing) {
+        if(currentBullet->p.x < levelWidthInMeters) {
+          // render;
+          Color color = {1.0f, 1.0f, 1.0f, 1};
+          V2 min = currentBullet->p * metersToPixels;
+          V2 relTopRight = {bulletWidthInPixels, bulletHeightInPixels};
+          V2 bulletTopRight = min + relTopRight;
+
+          colorShaderDrawRectangle(&colorShaderFrame, color, min, bulletTopRight);
+        }
+      }
     }
   }
 

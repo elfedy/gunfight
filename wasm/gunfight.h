@@ -35,29 +35,30 @@ enum textureIndex {
 struct Bullet {
   V2 p;
   V2 dP;
-  bool32 firing;
+  bool32 firing = false;
 };
 
 struct Enemy {
   V2 p;
   V2 dP;
   V2 intendedDirection;
-  bool32 active;
+  bool32 active = false;
+
+  u32 bulletCount;
+  f64 bulletLastFired;
+  Bullet bullets[3];
 };
 
 // GAME STATE 
 struct GameState {
-  V2 playerP;
-  V2 dPlayerP;
-
-  Bullet playerBullets[3];
-  
-
   f64 enemyLastSpawned;
   u32 enemiesIndex;
   u32 enemiesCurrentCount;
   Enemy enemies[10];
 
+  V2 playerP;
+  V2 dPlayerP;
+  Bullet playerBullets[3];
   u32 playerBulletCount;
   f64 playerBulletLastFired;
 }; 
