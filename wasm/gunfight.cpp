@@ -222,50 +222,52 @@ export void updateAndRender(f64 timestamp) {
       currentEnemy->p = newEnemyP;
       currentEnemy->dP = newDEnemyP;
 
-      // Update bullets
-      for(int i = 0; i < arrayLength(currentEnemy->bullets); ++i) {
-        Bullet *currentBullet = &currentEnemy->bullets[i];
-
-        if(currentBullet->firing) {
-          // Compute Bullet Movement
-          V2 ddBulletP = {0.0f, 0.0f};
-          V2 newBulletP = computeNewPosition(currentBullet->p, currentBullet->dP, ddBulletP, dt);
-          V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
-
-          // Collision with Player
-          V2 playerTopRight = 
-            globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters};
-          V2 bulletTopRight =
-            newBulletP + V2{bulletWidthInMeters, bulletHeightInMeters};
-          bool32 collidedWithPlayer = 
-          rectanglesAreColliding(
-              globalGameState.playerP, playerTopRight, newBulletP, bulletTopRight);
-
-              if(collidedWithPlayer) {
-                currentBullet->firing = false;
-                // TODO: Lose a life / Die
-              } else {
-                if(newBulletP.x < levelWidthInMeters) {
-                  currentBullet->p = newBulletP;
-                  currentBullet->dP = newDBulletP;
-                } else {
-                  currentBullet->firing = false;
-                }
-              }
-          }
-      }
 
       // Bullet AI
       if((timestamp - currentEnemy->bulletLastFired) > seconds(1)) {
         for(int i = 0; i < arrayLength(currentEnemy->bullets); i++) {
           Bullet *currentBullet = &currentEnemy->bullets[i];
           if(!currentBullet->firing) {
-            currentBullet->firing = 1;
+            currentBullet->firing = true;
             currentBullet->p = currentEnemy->p + V2{0.0f, enemyHeightInMeters*0.375f - bulletWidthInMeters/2};
             currentBullet->dP = {-30, 0};
+            currentEnemy->bulletLastFired = timestamp;
             break;
           }
         }
+      }
+    }
+
+    // Update bullets
+    for(int i = 0; i < arrayLength(currentEnemy->bullets); ++i) {
+      Bullet *currentBullet = &currentEnemy->bullets[i];
+
+      if(currentBullet->firing) {
+        // Compute Bullet Movement
+        V2 ddBulletP = {0.0f, 0.0f};
+        V2 newBulletP = computeNewPosition(currentBullet->p, currentBullet->dP, ddBulletP, dt);
+        V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
+
+        // Collision with Player
+        V2 playerTopRight = 
+          globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters};
+        V2 bulletTopRight =
+          newBulletP + V2{bulletWidthInMeters, bulletHeightInMeters};
+        bool32 collidedWithPlayer = 
+        rectanglesAreColliding(
+            globalGameState.playerP, playerTopRight, newBulletP, bulletTopRight);
+
+            if(collidedWithPlayer) {
+              currentBullet->firing = false;
+              // TODO: Lose a life / Die
+            } else {
+              if(newBulletP.x > 0) {
+                currentBullet->p = newBulletP;
+                currentBullet->dP = newDBulletP;
+              } else {
+                currentBullet->firing = false;
+              }
+            }
       }
     }
   }

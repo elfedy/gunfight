@@ -44,7 +44,6 @@ struct Enemy {
   V2 intendedDirection;
   bool32 active = false;
 
-  u32 bulletCount;
   f64 bulletLastFired;
   Bullet bullets[3];
 };
