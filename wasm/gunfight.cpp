@@ -130,7 +130,6 @@ export void updateAndRender(f64 timestamp) {
 
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
-    playerBecomeInvulnerable(&globalGameState, timestamp);
   }
 
   // Initialize Shader Frames
@@ -278,6 +277,7 @@ export void updateAndRender(f64 timestamp) {
 
             if(collidedWithPlayer) {
               currentBullet->firing = false;
+              playerBecomeInvulnerable(&globalGameState, timestamp);
               // TODO: Lose a life / Die
             } else {
               if(newBulletP.x > 0) {
