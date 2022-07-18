@@ -57,7 +57,14 @@ struct GameState {
 
   V2 playerP;
   V2 dPlayerP;
+  bool32 playerIsInvulnerable;
+  f64 playerInvulnerableSince;
   Bullet playerBullets[3];
+  
+  f64 playerAnimationInvulnerableLastTransition;
+  bool32 playerAnimationInvulnerableIsShowing;
+  
+
   u32 playerBulletCount;
   f64 playerBulletLastFired;
 }; 

@@ -79,6 +79,12 @@ void bufferPushF32(Buffer *buffer, f32 value) {
 
 #include "gunfight_shaders.h"
 
+internal
+void playerBecomeInvulnerable(GameState *gameState, f64 timestamp) {
+  gameState->playerIsInvulnerable = true;
+  gameState->playerInvulnerableSince = timestamp;
+}
+
 
 // CONTROLLER
 extern "C"
@@ -124,6 +130,7 @@ export void updateAndRender(f64 timestamp) {
 
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
+    playerBecomeInvulnerable(&globalGameState, timestamp);
   }
 
   // Initialize Shader Frames
@@ -131,6 +138,7 @@ export void updateAndRender(f64 timestamp) {
   TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
 
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
+  
 
   // Compute Player Movement
   V2 ddPlayerP = {0.0f, 0.0f};
@@ -192,7 +200,18 @@ export void updateAndRender(f64 timestamp) {
   V2 minPlayerRect = playerPInPixels;
   V2 maxPlayerRect = playerPInPixels + V2{playerWidthInPixels, playerHeightInPixels};
 
-  textureShaderDrawTexture(&textureShaderFrame, PLAYER, minPlayerRect, maxPlayerRect);
+  // Render Player
+  bool32 shouldRenderPlayer = true;
+  if(globalGameState.playerIsInvulnerable) {
+    u32 flashAnimationInterval = 125;
+    u32 timeSinceInvulnerable = (u32)(timestamp - globalGameState.playerInvulnerableSince);
+    u32 frameNumber = timeSinceInvulnerable / flashAnimationInterval;
+    shouldRenderPlayer = (frameNumber % 2) == 0;
+  }
+
+  if(shouldRenderPlayer) {
+    textureShaderDrawTexture(&textureShaderFrame, PLAYER, minPlayerRect, maxPlayerRect);
+  }
 
   // ENEMIES
   // Update Enemies
@@ -285,7 +304,7 @@ export void updateAndRender(f64 timestamp) {
 
       // Collision with enemies
       bool32 hasCollidedWithEnemy = false;
-      // NOTE(fede): The leftmost enemy is the one that is considered that collided
+      // NOTE(fede): The leftmost enemy overlapping a bullet is the one that is considered that collided
       Enemy *collidedEnemy;
 
       for(int i = 0; i < arrayLength(globalGameState.enemies); i++) {
