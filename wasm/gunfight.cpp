@@ -80,9 +80,14 @@ void bufferPushF32(Buffer *buffer, f32 value) {
 #include "gunfight_shaders.h"
 
 internal
-void playerBecomeInvulnerable(GameState *gameState, f64 timestamp) {
+void playerStartInvulnerable(GameState *gameState, f64 timestamp) {
   gameState->playerIsInvulnerable = true;
   gameState->playerInvulnerableSince = timestamp;
+}
+
+internal
+void playerStopInvulnerable(GameState *gameState) {
+  gameState->playerIsInvulnerable = false;
 }
 
 
@@ -199,6 +204,9 @@ export void updateAndRender(f64 timestamp) {
   V2 minPlayerRect = playerPInPixels;
   V2 maxPlayerRect = playerPInPixels + V2{playerWidthInPixels, playerHeightInPixels};
 
+  if(globalGameState.playerIsInvulnerable && ((timestamp - globalGameState.playerInvulnerableSince) > seconds(3))) {
+      playerStopInvulnerable(&globalGameState);
+  }
   // Render Player
   bool32 shouldRenderPlayer = true;
   if(globalGameState.playerIsInvulnerable) {
@@ -277,7 +285,7 @@ export void updateAndRender(f64 timestamp) {
 
             if(collidedWithPlayer) {
               currentBullet->firing = false;
-              playerBecomeInvulnerable(&globalGameState, timestamp);
+              playerStartInvulnerable(&globalGameState, timestamp);
               // TODO: Lose a life / Die
             } else {
               if(newBulletP.x > 0) {
