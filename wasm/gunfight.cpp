@@ -275,29 +275,32 @@ export void updateAndRender(f64 timestamp) {
         V2 newDBulletP = computeNewVelocity(currentBullet->dP, ddBulletP, dt);
 
         // Collision with Player
-        V2 playerTopRight = 
-          globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters};
-        V2 bulletTopRight =
-          newBulletP + V2{bulletWidthInMeters, bulletHeightInMeters};
-        bool32 collidedWithPlayer = 
-        rectanglesAreColliding(
-            globalGameState.playerP, playerTopRight, newBulletP, bulletTopRight);
+        if(!globalGameState.playerIsInvulnerable) {
+          V2 playerTopRight = 
+            globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters};
+          V2 bulletTopRight =
+            newBulletP + V2{bulletWidthInMeters, bulletHeightInMeters};
+          bool32 collidedWithPlayer = 
+          rectanglesAreColliding(
+              globalGameState.playerP, playerTopRight, newBulletP, bulletTopRight);
 
-            if(collidedWithPlayer) {
-              currentBullet->firing = false;
-              playerStartInvulnerable(&globalGameState, timestamp);
-              // TODO: Lose a life / Die
-            } else {
-              if(newBulletP.x > 0) {
-                currentBullet->p = newBulletP;
-                currentBullet->dP = newDBulletP;
-              } else {
-                currentBullet->firing = false;
-              }
-            }
+          if(collidedWithPlayer) {
+            currentBullet->firing = false;
+            playerStartInvulnerable(&globalGameState, timestamp);
+            // TODO: Lose a life / Die
+          }
+        }
+
+        if(newBulletP.x > 0) {
+          currentBullet->p = newBulletP;
+          currentBullet->dP = newDBulletP;
+        } else {
+          currentBullet->firing = false;
+        }
       }
     }
   }
+  
 
   // Update player bullets
 
