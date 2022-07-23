@@ -99,6 +99,20 @@ export void processControllerInput(u32 keyIndex, bool32 isDown) {
 }
 
 // RENDER
+internal 
+void endRenderFrame(ColorShaderFrame *colorShaderFrame, TextureShaderFrame *textureShaderFrame) {
+  globalColorShaderFrameTrianglesCount = colorShaderFrame->trianglesCount; 
+  globalTextureShaderFrameTrianglesCount = textureShaderFrame->trianglesCount; 
+}
+
+internal
+void renderGameOver(ColorShaderFrame *colorShaderFrame, TextureShaderFrame *textureShaderFrame, f32 levelWidth, f32 levelHeight) {
+  V2 min = { 0, 0 };
+  V2 max = { levelWidth, levelHeight };
+  Color color = { 0.0f, 0.0f, 0.0f, 1.0f};
+  colorShaderDrawRectangle(colorShaderFrame, color, min, max);
+  endRenderFrame(colorShaderFrame, textureShaderFrame);
+}
 
 extern "C"
 export void updateAndRender(f64 timestamp) {
@@ -110,10 +124,15 @@ export void updateAndRender(f64 timestamp) {
   f32 enemyWidthInMeters = 1.6f;
 
   // 16:9 aspect ratio
+  // TODO: this should be dynamic
+  f32 levelHeightInPixels = 540;
+  f32 levelWidthInPixels = 960;
+
   f32 levelHeightInMeters = 13.5f;
   f32 levelWidthInMeters = 24.0f;
 
-  f32 metersToPixels = 40;
+  // TODO: probar esto y dibujar el rect negro del game over
+  f32 metersToPixels = levelHeightInPixels / levelHeightInMeters;
 
   f32 playerWidthInPixels = playerWidthInMeters * metersToPixels;
   f32 playerHeightInPixels = playerHeightInMeters * metersToPixels;
@@ -129,20 +148,29 @@ export void updateAndRender(f64 timestamp) {
   if(!globalIsInitialized) {
     globalGameState.playerP = {1.0f, 5.0f};
     globalGameState.dPlayerP = {};
+    globalGameState.playerLives = 3;
+
     globalGameState.enemiesIndex = 0;
     globalGameState.enemiesCurrentCount = 0;
     globalGameState.enemyLastSpawned = timestamp;
 
+    globalGameState.gameOver = false;
+
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
   }
+
 
   // Initialize Shader Frames
   ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
   TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
 
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
-  
+                                                               
+  if(globalGameState.gameOver) {
+    renderGameOver(&colorShaderFrame, &textureShaderFrame, levelWidthInPixels, levelHeightInPixels);
+    return;
+  }
 
   // Compute Player Movement
   V2 ddPlayerP = {0.0f, 0.0f};
@@ -286,7 +314,14 @@ export void updateAndRender(f64 timestamp) {
 
           if(collidedWithPlayer) {
             currentBullet->firing = false;
-            playerStartInvulnerable(&globalGameState, timestamp);
+            --globalGameState.playerLives;
+            if(globalGameState.playerLives > 0) {
+              playerStartInvulnerable(&globalGameState, timestamp);
+            } else {
+              globalGameState.gameOver = true;
+              renderGameOver(&colorShaderFrame, &textureShaderFrame, levelWidthInPixels, levelHeightInPixels);
+              return;
+            }
             // TODO: Lose a life / Die
           }
         }
