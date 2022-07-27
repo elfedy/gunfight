@@ -88,6 +88,11 @@ V2 computeNewVelocity(V2 initialDP, V2 ddP, f32 dt) {
 }
 
 // COLLISION
+struct CollisionResult {
+  bool32 collided;
+  V2 newPosition;
+};
+
 bool32 rectanglesAreColliding(
     V2 aBottomLeft,
     V2 aTopRight,
@@ -101,6 +106,27 @@ bool32 rectanglesAreColliding(
   
   bool32 result = collidingOnXAxis && collidingOnYAxis;
   return result;
+}
+
+CollisionResult getV2CollisionWithBoundaries(V2 position, V2 min, V2 max) {
+  CollisionResult ret = { false, position };
+  if(ret.newPosition.x > max.x) {
+      ret.newPosition.x = max.x;
+      ret.collided = true;
+  }
+  if(ret.newPosition.x < min.x) {
+      ret.newPosition.x = min.x;
+      ret.collided = true;
+  }
+  if(ret.newPosition.y > max.y) {
+      ret.newPosition.y = max.y;
+      ret.collided = true;
+  }
+  if(ret.newPosition.y < min.y) {
+      ret.newPosition.y = min.y;
+      ret.collided = true;
+  }
+  return ret;
 }
 
 #define GUNFIGHT_MATH_H

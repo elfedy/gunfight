@@ -131,7 +131,6 @@ export void updateAndRender(f64 timestamp) {
   f32 levelHeightInMeters = 13.5f;
   f32 levelWidthInMeters = 24.0f;
 
-  // TODO: probar esto y dibujar el rect negro del game over
   f32 metersToPixels = levelHeightInPixels / levelHeightInMeters;
 
   f32 playerWidthInPixels = playerWidthInMeters * metersToPixels;
@@ -207,21 +206,13 @@ export void updateAndRender(f64 timestamp) {
   f32 playerMinX = 0;
   f32 playerMaxY = levelHeightInMeters - playerHeightInMeters;
   f32 playerMinY = 0;
-  if(newPlayerP.x > playerMaxX) {
-      newPlayerP.x = playerMaxX;
-      newDPlayerP = {0, 0};
-  }
-  if(globalGameState.playerP.x < playerMinX) {
-      newPlayerP.x = playerMinX;
-      newDPlayerP.x = 0;
-  }
-  if(globalGameState.playerP.y > playerMaxY) {
-      newPlayerP.y = playerMaxY;
-      newDPlayerP = {0, 0};
-  }
-  if(globalGameState.playerP.y < playerMinY) {
-      newPlayerP.y = playerMinY;
-      newDPlayerP = {0, 0};
+
+  CollisionResult boundariesCollision = 
+    getV2CollisionWithBoundaries(newPlayerP, V2{playerMinX, playerMinY}, V2{playerMaxX, playerMaxY});
+
+  newPlayerP = boundariesCollision.newPosition;
+  if(boundariesCollision.collided) {
+    newDPlayerP = {0, 0};
   }
 
   globalGameState.playerP = newPlayerP;
@@ -251,8 +242,8 @@ export void updateAndRender(f64 timestamp) {
   // ENEMIES
   // Update Enemies
   f32 enemyBaseAcceleration = 20.0f;
-  f32 enemyMinX = 0.3f * levelWidthInMeters;
-  f32 enemyMaxX = levelWidthInMeters - enemyWidthInMeters * 1.2;
+  f32 enemyAIMinX = 0.3f * levelWidthInMeters;
+  f32 enemyAIMaxX = levelWidthInMeters - enemyWidthInMeters * 1.2;
 
   for(int i = 0; i < arrayLength(globalGameState.enemies); ++i) {
     Enemy *currentEnemy = &globalGameState.enemies[i];
@@ -261,10 +252,10 @@ export void updateAndRender(f64 timestamp) {
       // Compute Enemy Movement
       // Movement AI
 
-      if(currentEnemy->p.x < enemyMinX) {
+      if(currentEnemy->p.x < enemyAIMinX) {
         currentEnemy->intendedDirection = {1, 0};
       } 
-      if(currentEnemy->p.x > enemyMaxX) {
+      if(currentEnemy->p.x > enemyAIMaxX) {
         currentEnemy->intendedDirection = {-1, 0};
       }
       V2 currentEnemyDdP = currentEnemy->intendedDirection * enemyBaseAcceleration;
@@ -272,6 +263,21 @@ export void updateAndRender(f64 timestamp) {
 
       V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, currentEnemyDdP, dt);
       V2 newDEnemyP = computeNewVelocity(currentEnemy->dP, currentEnemyDdP, dt);
+
+      // Collision with level boundaries
+      f32 enemyMaxX = levelWidthInMeters - enemyWidthInMeters;
+      f32 enemyMinX = 0;
+      f32 enemyMaxY = levelHeightInMeters - enemyHeightInMeters;
+      f32 enemyMinY = 0;
+
+
+      CollisionResult boundariesCollision = 
+    getV2CollisionWithBoundaries(newEnemyP, V2{enemyMinX, enemyMinY}, V2{enemyMaxX, enemyMaxY});
+
+      newEnemyP = boundariesCollision.newPosition;
+      if(boundariesCollision.collided) {
+        newDEnemyP = {0, 0};
+      }
 
       currentEnemy->p = newEnemyP;
       currentEnemy->dP = newDEnemyP;
@@ -322,7 +328,6 @@ export void updateAndRender(f64 timestamp) {
               renderGameOver(&colorShaderFrame, &textureShaderFrame, levelWidthInPixels, levelHeightInPixels);
               return;
             }
-            // TODO: Lose a life / Die
           }
         }
 
