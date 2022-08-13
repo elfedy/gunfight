@@ -26,7 +26,7 @@ typedef long bool32;
 #include "gunfight_math.h"
 
 // ENUMS
-enum textureIndex {
+enum TextureIndex {
   PLAYER,
   ENEMY_SHOOTER
 };
@@ -38,11 +38,21 @@ struct Bullet {
   bool32 firing = false;
 };
 
+enum EnemyAIMode {
+  ENEMY_AI_MOVING_UP,
+  ENEMY_AI_MOVING_DOWN,
+  ENEMY_AI_MOVING_HORIZONTAL,
+  ENEMY_AI_CHASING_PLAYER
+};
+
 struct Enemy {
   V2 p;
   V2 dP;
   V2 intendedDirection;
   bool32 active = false;
+
+  EnemyAIMode aiMode;
+  f64 aiModeLastChanged;
 
   f64 bulletLastFired;
   Bullet bullets[3];

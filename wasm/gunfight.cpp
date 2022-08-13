@@ -79,6 +79,7 @@ void bufferPushF32(Buffer *buffer, f32 value) {
 
 #include "gunfight_shaders.h"
 
+// GAME STATE
 internal
 void playerStartInvulnerable(GameState *gameState, f64 timestamp) {
   gameState->playerIsInvulnerable = true;
@@ -88,6 +89,20 @@ void playerStartInvulnerable(GameState *gameState, f64 timestamp) {
 internal
 void playerStopInvulnerable(GameState *gameState) {
   gameState->playerIsInvulnerable = false;
+}
+
+internal
+EnemyAIMode enemyPickAIMode() {
+  f32 rand = envRandF32();
+  if(rand < 0.20) {
+    return ENEMY_AI_MOVING_UP;
+  } else if(rand < 0.2) {
+    return ENEMY_AI_MOVING_DOWN;
+  } else if(rand < 0.6) {
+    return ENEMY_AI_CHASING_PLAYER;
+  } else {
+    return ENEMY_AI_MOVING_HORIZONTAL;
+  }
 }
 
 
@@ -251,14 +266,44 @@ export void updateAndRender(f64 timestamp) {
     if(currentEnemy->active) {
       // Compute Enemy Movement
       // Movement AI
+      if((timestamp - currentEnemy->aiModeLastChanged) > seconds(5)) {
+        currentEnemy->aiMode = enemyPickAIMode();
+      }
+      switch (currentEnemy->aiMode) {
+        case ENEMY_AI_MOVING_HORIZONTAL: {
+          currentEnemy->intendedDirection.y = 0;
+        } break;
+        case ENEMY_AI_MOVING_UP: {
+          currentEnemy->intendedDirection.y = 1;
+        } break;
+        case ENEMY_AI_MOVING_DOWN: {
+          currentEnemy->intendedDirection.y = -1;
+        } break;
+        case ENEMY_AI_CHASING_PLAYER: {
+          currentEnemy->intendedDirection.y = 0;
+          if(globalGameState.playerP.y < currentEnemy->p.y) {
+            currentEnemy->intendedDirection.y = -1;
+          }
+          if(globalGameState.playerP.y > currentEnemy->p.y) {
+            currentEnemy->intendedDirection.y = 1;
+          }
+        } break;
+      }
 
       if(currentEnemy->p.x < enemyAIMinX) {
-        currentEnemy->intendedDirection = {1, 0};
+        currentEnemy->intendedDirection.x = 1;
       } 
       if(currentEnemy->p.x > enemyAIMaxX) {
-        currentEnemy->intendedDirection = {-1, 0};
+        currentEnemy->intendedDirection.x = -1;
       }
-      V2 currentEnemyDdP = currentEnemy->intendedDirection * enemyBaseAcceleration;
+
+      V2 normalizedDirection = currentEnemy->intendedDirection;
+      if((normalizedDirection.x != 0.0f) && (normalizedDirection.y != 0.0f))
+      {
+        normalizedDirection *= 0.707186781197f;
+      }
+
+      V2 currentEnemyDdP = normalizedDirection * enemyBaseAcceleration;
       currentEnemyDdP += -2.5f*currentEnemy->dP;
 
       V2 newEnemyP = computeNewPosition(currentEnemy->p, currentEnemy->dP, currentEnemyDdP, dt);
@@ -401,7 +446,12 @@ export void updateAndRender(f64 timestamp) {
   // Spawn Enemies
   bool32 enemyBufferFull = globalGameState.enemiesCurrentCount == arrayLength(globalGameState.enemies);
 
-  if(!enemyBufferFull && ((timestamp - globalGameState.enemyLastSpawned) > seconds(2))) {
+  f64 timeSinceLastSpawned = timestamp - globalGameState.enemyLastSpawned;
+  bool32 shouldSpawnEnemy = 
+    ((globalGameState.enemiesCurrentCount == 0 && timeSinceLastSpawned > seconds(3))) ||
+    (timeSinceLastSpawned > seconds(15));
+  if(!enemyBufferFull && shouldSpawnEnemy) {
+  //if(!enemyBufferFull && ((timestamp - globalGameState.enemyLastSpawned) > seconds(5))) {
     // Loop until we find a not active slot to spawn the enemy
     while(true) {
       Enemy *currentEnemy = &globalGameState.enemies[globalGameState.enemiesIndex];
@@ -417,6 +467,8 @@ export void updateAndRender(f64 timestamp) {
         currentEnemy->dP = { -5.0f, 0 };
         currentEnemy->intendedDirection = { -1, 0};
         currentEnemy->bulletLastFired = 0;
+        currentEnemy->aiMode = ENEMY_AI_CHASING_PLAYER;
+        currentEnemy->aiModeLastChanged = timestamp;
         break;
       }
     }
