@@ -60,7 +60,7 @@ struct Enemy {
 
 // GAME STATE 
 struct GameState {
-  f64 enemyLastSpawned;
+  f64 enemyNextSpawn;
   u32 enemiesIndex;
   u32 enemiesCurrentCount;
   Enemy enemies[10];

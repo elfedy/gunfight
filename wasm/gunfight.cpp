@@ -166,7 +166,7 @@ export void updateAndRender(f64 timestamp) {
 
     globalGameState.enemiesIndex = 0;
     globalGameState.enemiesCurrentCount = 0;
-    globalGameState.enemyLastSpawned = timestamp;
+    globalGameState.enemyNextSpawn = (timestamp + seconds(2));
 
     globalGameState.gameOver = false;
 
@@ -446,11 +446,8 @@ export void updateAndRender(f64 timestamp) {
   // Spawn Enemies
   bool32 enemyBufferFull = globalGameState.enemiesCurrentCount == arrayLength(globalGameState.enemies);
 
-  f64 timeSinceLastSpawned = timestamp - globalGameState.enemyLastSpawned;
-  bool32 shouldSpawnEnemy = 
-    ((globalGameState.enemiesCurrentCount == 0 && timeSinceLastSpawned > seconds(3))) ||
-    (timeSinceLastSpawned > seconds(15));
-  if(!enemyBufferFull && shouldSpawnEnemy) {
+  //f64 randSeconds = 5.0f + envRandF32() * 10.0f;
+  if(!enemyBufferFull && (globalGameState.enemyNextSpawn <= timestamp)) {
   //if(!enemyBufferFull && ((timestamp - globalGameState.enemyLastSpawned) > seconds(5))) {
     // Loop until we find a not active slot to spawn the enemy
     while(true) {
@@ -472,7 +469,10 @@ export void updateAndRender(f64 timestamp) {
         break;
       }
     }
-    globalGameState.enemyLastSpawned = timestamp;
+
+    f64 enemyNextSpawnSeconds = 2.0f + envRandF32() * 3.0f;
+    globalGameState.enemyNextSpawn = timestamp + seconds(enemyNextSpawnSeconds);
+
     ++globalGameState.enemiesCurrentCount;
   }
 
