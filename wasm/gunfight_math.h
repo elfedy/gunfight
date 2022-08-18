@@ -91,6 +91,7 @@ V2 computeNewVelocity(V2 initialDP, V2 ddP, f32 dt) {
 struct CollisionResult {
   bool32 collided;
   V2 newPosition;
+  V2 newDPosition;
 };
 
 bool32 rectanglesAreColliding(
@@ -108,22 +109,26 @@ bool32 rectanglesAreColliding(
   return result;
 }
 
-CollisionResult getV2CollisionWithBoundaries(V2 position, V2 min, V2 max) {
-  CollisionResult ret = { false, position };
+CollisionResult getV2CollisionWithBoundaries(V2 position, V2 dPosition, V2 min, V2 max) {
+  CollisionResult ret = { false, position, dPosition };
   if(ret.newPosition.x > max.x) {
       ret.newPosition.x = max.x;
+      ret.newDPosition.x = 0; 
       ret.collided = true;
   }
   if(ret.newPosition.x < min.x) {
       ret.newPosition.x = min.x;
+      ret.newDPosition.x = 0; 
       ret.collided = true;
   }
   if(ret.newPosition.y > max.y) {
       ret.newPosition.y = max.y;
+      ret.newDPosition.y = 0; 
       ret.collided = true;
   }
   if(ret.newPosition.y < min.y) {
       ret.newPosition.y = min.y;
+      ret.newDPosition.y = 0; 
       ret.collided = true;
   }
   return ret;

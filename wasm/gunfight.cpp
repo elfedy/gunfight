@@ -94,7 +94,8 @@ void playerStopInvulnerable(GameState *gameState) {
 internal
 EnemyAIMode enemyPickAIMode() {
   f32 rand = envRandF32();
-  if(rand < 0.20) {
+  //if(rand < 0.20) {
+  if(1) {
     return ENEMY_AI_MOVING_UP;
   } else if(rand < 0.2) {
     return ENEMY_AI_MOVING_DOWN;
@@ -223,12 +224,10 @@ export void updateAndRender(f64 timestamp) {
   f32 playerMinY = 0;
 
   CollisionResult boundariesCollision = 
-    getV2CollisionWithBoundaries(newPlayerP, V2{playerMinX, playerMinY}, V2{playerMaxX, playerMaxY});
+    getV2CollisionWithBoundaries(newPlayerP, newDPlayerP, V2{playerMinX, playerMinY}, V2{playerMaxX, playerMaxY});
 
   newPlayerP = boundariesCollision.newPosition;
-  if(boundariesCollision.collided) {
-    newDPlayerP = {0, 0};
-  }
+  newDPlayerP = boundariesCollision.newDPosition;
 
   globalGameState.playerP = newPlayerP;
   globalGameState.dPlayerP = newDPlayerP;
@@ -315,14 +314,11 @@ export void updateAndRender(f64 timestamp) {
       f32 enemyMaxY = levelHeightInMeters - enemyHeightInMeters;
       f32 enemyMinY = 0;
 
-
       CollisionResult boundariesCollision = 
-    getV2CollisionWithBoundaries(newEnemyP, V2{enemyMinX, enemyMinY}, V2{enemyMaxX, enemyMaxY});
+        getV2CollisionWithBoundaries(newEnemyP, newDEnemyP, V2{enemyMinX, enemyMinY}, V2{enemyMaxX, enemyMaxY});
 
       newEnemyP = boundariesCollision.newPosition;
-      if(boundariesCollision.collided) {
-        newDEnemyP = {0, 0};
-      }
+      newDEnemyP = boundariesCollision.newDPosition;
 
       currentEnemy->p = newEnemyP;
       currentEnemy->dP = newDEnemyP;
