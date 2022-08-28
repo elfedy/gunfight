@@ -7,18 +7,27 @@ const GlobalConfig = {
 let wasmMemory = new WebAssembly.Memory({initial: 160, maximum: 160});
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
 
-let spriteAtlas = new Image();
 let context = {
   wasm: null,
   images: [],
   loadedImages: 0,
 }
 
-spriteAtlas.onload = () =>  {
-  context.images.push(spriteAtlas);
-  context.loadedImages++;
-};
-spriteAtlas.src = 'sprite_atlas.png';
+const imageUrls = [
+  'sprite_atlas.png',
+  'background.png',
+];
+
+imageUrls.forEach((imageUrl, index) => {
+  let image = new Image();
+  image.src = imageUrl;
+
+  image.onload = () =>  {
+    context.images[index] = image;
+    context.loadedImages++;
+    tryInitializeGameLoop();
+  };
+});
 
 
 WebAssembly.instantiateStreaming(
@@ -39,14 +48,12 @@ WebAssembly.instantiateStreaming(
   }
 ).then(wasm => {
   context.wasm = wasm;
-  waitForInitialization();
+  tryInitializeGameLoop();
 });
 
-function waitForInitialization() {
-  if(context.wasm !== null && context.loadedImages === 1) {
+function tryInitializeGameLoop() {
+  if(context.wasm !== null && context.loadedImages === imageUrls.length) {
     initializeGameLoop(context);
-  } else {
-    setTimeout(waitForInitialization, 100);
   }
 }
 
@@ -66,7 +73,8 @@ function initializeGameLoop(context) {
   // Setup Shaders
   let colorShaderInfo = colorShaderSetup(gl);
   let textureShaderInfo = textureShaderSetup(gl);
-  textureShaderSetTexture(gl, 'TEXTURE0', textureShaderInfo, context.images[0]);
+  textureShaderSetTexture(gl, 'TEXTURE0', textureShaderInfo, context.images[0], 'sprite');
+  textureShaderSetTexture(gl, 'TEXTURE1', textureShaderInfo, context.images[1], 'background');
 
   // Setup event listeners
 	const processKeyChange = (keyCode, isDown) => {
@@ -120,13 +128,69 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
 
     gl.clearColor(0.9, 0.9, 0.9, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
       
     // Tell WebGL how to convert from clip space to pixels
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    gl.useProgram(colorShaderInfo.program);
+
+    // TODO: no se ven las balas.
+    // draw background
+    gl.useProgram(textureShaderInfo.program);
+
+    // Provide position coordinates
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureShaderInfo.buffers.aPosition);
+    gl.vertexAttribPointer(
+      textureShaderInfo.locations.aPosition,
+      2,  // size: components per iteration
+      gl.FLOAT,  // data type
+      false, // normalize
+      0, // stride: bytes between beggining of consecutive vetex attributes in buffer
+      0 // offset: where to start reading data from the buffer
+    );
+    // Add vertices to array buffer
+    let backgroundAPositions = new Float32Array([
+      0, 0,
+      gl.canvas.width, 0,
+      0, gl.canvas.height,
+      0, gl.canvas.height,
+      gl.canvas.width, 0,
+      gl.canvas.width, gl.canvas.height
+    ]);
+    // Populate buffer bound to array buffer with the vetices needed to be drawn
+    gl.bufferData(gl.ARRAY_BUFFER, backgroundAPositions, gl.STATIC_DRAW);
+
+    // Provide texture coordinates
+    gl.bindBuffer(gl.ARRAY_BUFFER, textureShaderInfo.buffers.aTexCoord);
+    gl.vertexAttribPointer(
+      textureShaderInfo.locations.aTexCoord,
+      2,  // size: components per iteration
+      gl.FLOAT,  // data type
+      false, // normalize
+      0, // stride: bytes between beggining of consecutive vetex attributes in buffer
+      0 // offset: where to start reading data from the buffer
+    );
+
+    let backgroundATexCoords = new Float32Array([
+      0, 0,
+      1, 0,
+      0, 1,
+      0, 1,
+      1, 0,
+      1, 1,
+    ]); 
+    gl.bufferData(gl.ARRAY_BUFFER, backgroundATexCoords, gl.STATIC_DRAW);
+
+    // Set projection matrix data
+    gl.uniformMatrix3fv(textureShaderInfo.locations.uMatrix, false, matrixProjection);
+
+    gl.uniform1i(textureShaderInfo.locations.uImage, 1);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     // COLOR SHADER
+    gl.useProgram(colorShaderInfo.program);
 
     // Bind aPosition to the array buffer target
     gl.bindBuffer(gl.ARRAY_BUFFER, colorShaderInfo.buffers.aPosition);
@@ -141,7 +205,6 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
       0 // offset: where to start reading data from the buffer
     );
 
-    let matrixProjection = Mat3.projection(gl.canvas.width, gl.canvas.height);
     gl.uniformMatrix3fv(colorShaderInfo.locations.uMatrix, false, matrixProjection);
 
     let numberOfTriangles = wasm.instance.exports.colorShaderGetTrianglesCount();
@@ -240,6 +303,8 @@ function run(wasm, gl, colorShaderInfo, textureShaderInfo) {
 
     // Set projection matrix data
     gl.uniformMatrix3fv(textureShaderInfo.locations.uMatrix, false, matrixProjection);
+
+    gl.uniform1i(textureShaderInfo.locations.uImage, 0);
 
     let primitiveType = gl.TRIANGLES;
     let offset = 0;

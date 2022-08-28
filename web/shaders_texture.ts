@@ -41,6 +41,7 @@ function textureShaderSetup(gl) {
     },
     textures: {
       sprite: gl.createTexture(),
+      background: gl.createTexture(),
     }
   };
 
@@ -48,16 +49,20 @@ function textureShaderSetup(gl) {
   gl.enableVertexAttribArray(shaderInfo.locations.aPosition);
   gl.enableVertexAttribArray(shaderInfo.locations.aTexCoord);
 
+  // Enable some config to make alpha in images blend with the rest.
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
   return shaderInfo;
 }
 
-function textureShaderSetTexture(gl, glTargetTexture: string, shaderInfo, image) {
+function textureShaderSetTexture(gl, glTargetTexture: string, shaderInfo, image, name) {
   // Make shader texture the active texture
   // Make the target texture the active gl texture
-  // TODO: Ver como esto se relaciona con los targets
   gl.activeTexture(gl[glTargetTexture]);
   // Bind the sprite texture to TEXTURE_2D binding point
-  gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures.sprite);
+  gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures[name]);
 
   // Set texture parameters
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -66,11 +71,5 @@ function textureShaderSetTexture(gl, glTargetTexture: string, shaderInfo, image)
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
   // Upload sprite image to the GPU's texture object
-  // TODO: ver esto como se relaciona con las active textures
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-
-  // Add some magic stuff to make alpha in images blend with the rest.
-  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-  gl.enable(gl.BLEND);
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 }
