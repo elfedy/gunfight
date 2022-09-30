@@ -1,2 +1,3 @@
 envLogF32
 envRandF32
+envPlayAudioShot

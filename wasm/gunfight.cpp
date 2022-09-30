@@ -333,6 +333,7 @@ export void updateAndRender(f64 timestamp) {
             currentBullet->p = currentEnemy->p + V2{0.0f, enemyHeightInMeters*0.375f - bulletWidthInMeters/2};
             currentBullet->dP = {-30, 0};
             currentEnemy->bulletLastFired = timestamp;
+            envPlayAudioShot();
             break;
           }
         }
@@ -517,6 +518,7 @@ export void updateAndRender(f64 timestamp) {
         currentBullet->firing = 1;
         currentBullet->p = globalGameState.playerP + V2{playerWidthInMeters, playerHeightInMeters*0.375f - bulletWidthInMeters/2};
         currentBullet->dP = {30, 0};
+        envPlayAudioShot();
         break;
       }
     }

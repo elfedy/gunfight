@@ -8,4 +8,5 @@ Cargo.lock
 
 *.o
 *.bc
+*.wasm
 

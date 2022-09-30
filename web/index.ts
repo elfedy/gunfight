@@ -30,18 +30,51 @@ imageUrls.forEach((imageUrl, index) => {
 });
 
 
+let audioSetShot = {
+  audios: [],
+  currentIndex: 0
+};
+
+let shotFileBlob;
+fetch('shot.mp3')
+  .then((res) => res.blob())
+  .then((blob) => {
+    shotFileBlob=URL.createObjectURL(blob);
+    for(let i = 0; i < 3; i++) {
+      audioSetShot.audios.push(new Audio(shotFileBlob));
+    }
+  })
+
+const playAudio = (audioSet) => {
+  // Audio has not loaded yet. Do not play
+  if(audioSet.audios.length === 0) {
+    return;
+  }
+  let audio = audioSet.audios[audioSet.currentIndex];
+  audio.currentTime = 0;
+  audio.play();
+  audioSet.currentIndex++;
+  if(audioSet.currentIndex >= (audioSet.audios.length)) {
+    audioSet.currentIndex = 0;
+  }
+};
+
 WebAssembly.instantiateStreaming(
   fetch('gunfight.wasm'),
   {
     env: {
       memory: wasmMemory,
 
-      logBytes: consoleLogBytes,
-      logUtf8: consoleLogUtf8,
-      envLogF32: (f32) => console.log(f32),
       envRandF32: () => Math.random(),
+
+      envPlayAudioShot: () => playAudio(audioSetShot),
+
+      logBytes: consoleLogBytes,
+      envLogF32: (f32) => console.log(f32),
+      logUtf8: consoleLogUtf8,
       console_log_pointer: (ptr) => console.log(ptr),
       console_log_usize: (val) => console.log(val),
+
       get_canvas_width: getCanvasWidth,
       get_canvas_height: getCanvasHeight,
     }
