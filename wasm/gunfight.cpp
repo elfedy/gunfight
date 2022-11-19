@@ -250,7 +250,7 @@ export void updateAndRender(f64 timestamp) {
   }
 
   if(shouldRenderPlayer) {
-    textureShaderDrawTexture(&textureShaderFrame, PLAYER, minPlayerRect, maxPlayerRect);
+    textureShaderDrawTexture(&textureShaderFrame, SPRITE_ATLAS_PLAYER, minPlayerRect, maxPlayerRect);
   }
 
   // ENEMIES
@@ -485,7 +485,7 @@ export void updateAndRender(f64 timestamp) {
         V2 relTopRight = {enemyWidthInPixels, enemyWidthInPixels};
         V2 enemyTopRight = bottomLeft + relTopRight;
 
-        textureShaderDrawTexture(&textureShaderFrame, ENEMY_SHOOTER, bottomLeft, enemyTopRight);
+        textureShaderDrawTexture(&textureShaderFrame, SPRITE_ATLAS_ENEMY_SHOOTER, bottomLeft, enemyTopRight);
     }
 
     // bullets

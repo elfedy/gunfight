@@ -8,7 +8,8 @@ let command = './build_wasm.sh';
 console.log(`Started watching ${dir}`);
 
 chokidar.watch(dir).on('change', filepath => {
-    if(path.extname(filepath) === '.c') {
+    const extension = path.extname(filepath);
+    if(extension === '.c' || extension === '.h') {
       console.log(`Detected change in ${path}.`);
       try {
         exec(command, (error, stdout, stderr) => {

@@ -25,12 +25,6 @@ typedef long bool32;
 #include "gunfight_imports.h"
 #include "gunfight_math.h"
 
-// ENUMS
-enum TextureIndex {
-  PLAYER,
-  ENEMY_SHOOTER
-};
-
 // ENTITIES
 struct Bullet {
   V2 p;
@@ -63,7 +57,9 @@ struct GameState {
   f64 enemyNextSpawn;
   u32 enemiesIndex;
   u32 enemiesCurrentCount;
-  Enemy enemies[10];
+  // TODO(fede): why does the game crash with more than
+  // 8 enemies in this array when spawining the first one?
+  Enemy enemies[8];
 
   V2 playerP;
   V2 dPlayerP;

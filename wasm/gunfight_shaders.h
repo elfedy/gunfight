@@ -1,3 +1,5 @@
+#include "gunfight_sprite_atlas.h" 
+
 // Data about what the color shader should draw on the next frame
 struct ColorShaderFrame {
   u32 trianglesCount;
@@ -11,44 +13,6 @@ struct TextureShaderFrame {
   Buffer aPositionBuffer;
   Buffer aTexCoordBuffer;
 }; 
-
-// TODO(fede): For now textures are hardcoded and there's no identifier to
-// determien which texture is which. Maybe it is worth it to build a system
-// of a dynamic set of textures where all data is read from a header and
-// texture metadata can be fetched by key
-struct AtlasTextureMetadata {
-  f32 x;
-  f32 y;
-  f32 width;
-  f32 height;
-};
-
-struct SpriteAtlasMetadata {
-  u32 totalWidth;
-  u32 totalHeight;
-  AtlasTextureMetadata texturesMetadata[2];
-};
-
-global_variable SpriteAtlasMetadata globalSpriteAtlasMetadata = {
-  32,
-  16,
-  {
-    // player
-    {
-      0,
-      0,
-      16,
-      16
-    },
-    // enemy shooter
-    {
-      16,
-      0,
-      16,
-      16
-    }
-  }
-};
 
 // SHADER FRAMES
 ColorShaderFrame colorShaderFrameInit() {
@@ -127,22 +91,9 @@ internal void colorShaderDrawRectangle(
 internal void setATexCoordValsFromTextureIndex(int textureIndex, Buffer *buffer) {
   AtlasTextureMetadata textureMetadata =
     globalSpriteAtlasMetadata.texturesMetadata[textureIndex];
-  f32 minX = textureMetadata.x / globalSpriteAtlasMetadata.totalWidth;
-  f32 minY = textureMetadata.y / globalSpriteAtlasMetadata.totalHeight;
-  f32 maxX = (textureMetadata.x + textureMetadata.width) / globalSpriteAtlasMetadata.totalWidth;
-  f32 maxY = (textureMetadata.y + textureMetadata.height) / globalSpriteAtlasMetadata.totalHeight;
-
-  f32 vals[12] = {
-    minX, minY,
-    maxX, minY,
-    minX, maxY,
-    minX, maxY,
-    maxX, minY,
-    maxX, maxY,
-  }; 
 
   for(int i = 0; i<12; ++i) {
-    bufferPushF32(buffer, vals[i]);
+    bufferPushF32(buffer, textureMetadata.textureCoordinates[i]);
   }
 }
 
