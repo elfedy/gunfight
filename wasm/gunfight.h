@@ -12,15 +12,18 @@ typedef long bool32;
 
 #define export __attribute__((visibility("default")))
 
-#define arrayLength(A) sizeof(A)/sizeof(A[0])
+#define arrayLength(A) sizeof(A) / sizeof(A[0])
 
-#define kilobytes(value) ((value)*1024LL)
-#define megabytes(value) (kilobytes(value)*1024LL)
-#define gigabytes(value) (megabytes(value)*1024LL)
+#define kilobytes(value) ((value) * 1024LL)
+#define megabytes(value) (kilobytes(value) * 1024LL)
+#define gigabytes(value) (megabytes(value) * 1024LL)
 
 #define seconds(value) (value * 1000)
 
-#define assert(expression) if(!(expression)) { __builtin_trap(); }
+#define assert(expression)                                                     \
+  if (!(expression)) {                                                         \
+    __builtin_trap();                                                          \
+  }
 
 #include "gunfight_imports.h"
 #include "gunfight_math.h"
@@ -52,14 +55,12 @@ struct Enemy {
   Bullet bullets[3];
 };
 
-// GAME STATE 
+// GAME STATE
 struct GameState {
   f64 enemyNextSpawn;
   u32 enemiesIndex;
   u32 enemiesCurrentCount;
-  // TODO(fede): why does the game crash with more than
-  // 8 enemies in this array when spawining the first one?
-  Enemy enemies[8];
+  Enemy enemies[10];
 
   V2 playerP;
   V2 dPlayerP;
@@ -67,24 +68,22 @@ struct GameState {
   f64 playerInvulnerableSince;
   Bullet playerBullets[3];
   u32 playerLives;
-  
+
   f64 playerAnimationInvulnerableLastTransition;
   bool32 playerAnimationInvulnerableIsShowing;
-  
+
   bool32 gameOver;
 
   u32 playerBulletCount;
   f64 playerBulletLastFired;
-}; 
+};
 
 // CONTROLLER
-struct GameButtonState
-{
+struct GameButtonState {
   bool32 isDown;
 };
 
-struct GameControllerInput
-{
+struct GameControllerInput {
   union {
     GameButtonState buttons[6];
     struct {
