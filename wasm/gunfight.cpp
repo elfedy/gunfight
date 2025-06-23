@@ -553,6 +553,20 @@ extern "C" export void updateAndRender(f64 timestamp) {
     }
   }
 
+  // Render player lives as hearts
+  f32 heartSize = 32.0f; // Size of heart sprite in pixels
+  f32 heartPadding = 8.0f; // Padding between hearts
+  f32 heartStartX = 16.0f; // Starting X position from left edge
+  f32 heartY = levelHeightInPixels - heartSize - 16.0f; // Y position from top
+  
+  for (u32 i = 0; i < globalGameState.playerLives; ++i) {
+    V2 heartBottomLeft = {heartStartX + i * (heartSize + heartPadding), heartY};
+    V2 heartTopRight = heartBottomLeft + V2{heartSize, heartSize};
+    
+    textureShaderDrawTexture(&textureShaderFrame, SPRITE_ATLAS_HEART,
+                             heartBottomLeft, heartTopRight);
+  }
+
   // Update globals
   globalColorShaderFrameTrianglesCount = colorShaderFrame.trianglesCount;
   globalTextureShaderFrameTrianglesCount = textureShaderFrame.trianglesCount;
