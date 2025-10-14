@@ -5,15 +5,19 @@ set -o pipefail
 
 echo building web...
 
-tsFiles='
-  web/math.ts
-  web/shaders.ts
-  web/shaders_color.ts
-  web/shaders_texture.ts
-  web/index.ts
-  '
-tsc $tsFiles --outFile build/index.js --lib dom,es2015
-
 cp ./web/index.html ./build/index.html
+
+# Save current directory
+CUR_DIR=$(pwd)
+
+# Target repo path
+OTHER_REPO="web"
+
+{
+    cd "$OTHER_REPO"
+    npm run build
+} || true
+
+cd "$CUR_DIR"
 
 echo OK

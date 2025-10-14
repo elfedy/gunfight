@@ -1,0 +1,17 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.ts",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "npm run check && esbuild src/index.ts --bundle --outfile=../build/index.js --format=iife --minify",
+    "dev": "esbuild src/index.ts --bundle --outfile=../build/index.js --format=iife --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  }
+}

@@ -1,5 +1,25 @@
-// TODO: Renderear al tipo con el shader de los comments
-function textureShaderSetup(gl) {
+import { initShaderProgram } from "./shaders";
+
+export interface TextureShaderInfo {
+  program: WebGLProgram,
+  buffers: {
+    aPosition: WebGLBuffer,
+    aTexCoord: WebGLBuffer,
+  },
+  locations: {
+    aPosition: number,
+    aTexCoord: number,
+    uMatrix: WebGLUniformLocation,
+    uImage: WebGLUniformLocation,
+  },
+  textures: {
+    sprite: WebGLTexture,
+    background: WebGLTexture,
+  }
+
+}
+
+export function textureShaderSetup(gl: WebGLRenderingContext): TextureShaderInfo {
   let vertexShaderSource = `
       attribute vec2 aPosition;
       attribute vec2 aTexCoord;
@@ -11,7 +31,7 @@ function textureShaderSetup(gl) {
         vTexCoord = aTexCoord;
       }
     `;
-  
+
   let fragmentShaderSource = `
       precision mediump float;
 
@@ -25,23 +45,23 @@ function textureShaderSetup(gl) {
       }
     `;
 
-  let shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
+  let shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource)!;
 
   let shaderInfo = {
     program: shaderProgram,
     buffers: {
-      aPosition: gl.createBuffer(),
-      aTexCoord: gl.createBuffer(),
+      aPosition: gl.createBuffer()!,
+      aTexCoord: gl.createBuffer()!,
     },
     locations: {
       aPosition: gl.getAttribLocation(shaderProgram, "aPosition"),
       aTexCoord: gl.getAttribLocation(shaderProgram, "aTexCoord"),
-      uMatrix: gl.getUniformLocation(shaderProgram, "uMatrix"),
-      uImage: gl.getUniformLocation(shaderProgram, "uImage"),
+      uMatrix: gl.getUniformLocation(shaderProgram, "uMatrix")!,
+      uImage: gl.getUniformLocation(shaderProgram, "uImage")!,
     },
     textures: {
-      sprite: gl.createTexture(),
-      background: gl.createTexture(),
+      sprite: gl.createTexture()!,
+      background: gl.createTexture()!,
     }
   };
 
@@ -57,12 +77,12 @@ function textureShaderSetup(gl) {
   return shaderInfo;
 }
 
-function textureShaderSetTexture(gl, glTargetTexture: string, shaderInfo, image, name) {
+export function textureShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture: string, shaderInfo: TextureShaderInfo, image: HTMLImageElement, name: string) {
   // Make shader texture the active texture
   // Make the target texture the active gl texture
-  gl.activeTexture(gl[glTargetTexture]);
+  gl.activeTexture(gl[glTargetTexture as keyof WebGLRenderingContext] as number);
   // Bind the sprite texture to TEXTURE_2D binding point
-  gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures[name]);
+  gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures[name as keyof typeof shaderInfo.textures]);
 
   // Set texture parameters
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)

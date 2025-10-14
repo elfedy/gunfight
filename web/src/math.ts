@@ -1,6 +1,8 @@
+export type Mat3 = [number, number, number, number, number, number, number, number, number];
+
 // MATRICES
-let Mat3 = {
-  identity: function() {
+export let Mat3Utils = {
+  identity: function(): Mat3 {
     return [
       1, 0, 0,
       0, 1, 0,
@@ -8,7 +10,7 @@ let Mat3 = {
     ];
   },
 
-  multiply: function(a, b) {
+  multiply: function(a: Mat3, b: Mat3): Mat3 {
     var a00 = a[0 * 3 + 0];
     var a01 = a[0 * 3 + 1];
     var a02 = a[0 * 3 + 2];
@@ -41,7 +43,7 @@ let Mat3 = {
     ];
   },
 
-  projection: function(width, height) {
+  projection: function(width: number, height: number): Mat3 {
     return [
       2 / width, 0, 0,
       0, 2 / height, 0,
@@ -49,7 +51,7 @@ let Mat3 = {
     ]
   },
 
-  translation: function(tx, ty) {
+  translation: function(tx: number, ty: number): Mat3 {
     return [
       1, 0, 0,
       0, 1, 0,
@@ -57,7 +59,7 @@ let Mat3 = {
     ];
   },
 
-  rotation: function(angleInRadians) {
+  rotation: function(angleInRadians: number): Mat3 {
     var c = Math.cos(angleInRadians);
     var s = Math.sin(angleInRadians);
     return [
@@ -67,11 +69,11 @@ let Mat3 = {
     ];
   },
 
-  scaling: function(sx, sy) {
+  scaling: function(sx: number, sy: number): Mat3 {
     return [
       sx, 0, 0,
       0, sy, 0,
-      0, 0 , 1,
+      0, 0, 1,
     ];
   },
 };
