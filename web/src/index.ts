@@ -26,8 +26,8 @@ let context: Context = {
 
 const imageUrls = [
 	'sprite_atlas.png',
-	'font_atlas.png',
 	'background.png',
+	'font_atlas.png',
 ];
 
 imageUrls.forEach((imageUrl, index) => {
