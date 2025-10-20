@@ -1,6 +1,7 @@
 import { Mat3Utils } from "./math"
 import { colorShaderSetup, ColorShaderInfo } from "./shaders_color";
 import { textureShaderSetup, textureShaderSetTexture, TextureShaderInfo } from "./shaders_texture";
+import { fontShaderSetup, fontShaderDrawFrame, FontShaderInfo, fontShaderSetTexture } from "./shaders_font";
 import { WasmExports } from "./exports";
 
 // Global Config
@@ -11,6 +12,9 @@ const GlobalConfig = {
 // NOTE(fede): 1 page = 64 KB
 let wasmMemory = new WebAssembly.Memory({ initial: 160, maximum: 160 });
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
+
+let charset = null;
+fetch("charset.json").then(r => r.json()).then(j => { charset = j; console.log(charset); });
 
 interface Context {
 	wasm: WebAssembly.WebAssemblyInstantiatedSource | null,
@@ -121,9 +125,13 @@ function initializeGameLoop(context: Context) {
 
 	// Setup Shaders
 	let colorShaderInfo = colorShaderSetup(gl);
+
 	let textureShaderInfo = textureShaderSetup(gl);
 	textureShaderSetTexture(gl, 'TEXTURE0', textureShaderInfo, context.images[0], 'sprite');
 	textureShaderSetTexture(gl, 'TEXTURE1', textureShaderInfo, context.images[1], 'background');
+
+	let fontShaderInfo = fontShaderSetup(gl);
+	fontShaderSetTexture(gl, 'TEXTURE2', fontShaderInfo, context.images[2]);
 
 	// Setup event listeners
 	const processKeyChange = (keyCode: string, isDown: number) => {
@@ -137,7 +145,7 @@ function initializeGameLoop(context: Context) {
 	window.addEventListener('keyup', (e) => processKeyChange(e.code, 0));
 
 	// UPDATE AND RENDER
-	window.requestAnimationFrame(run(wasm, gl, colorShaderInfo, textureShaderInfo));
+	window.requestAnimationFrame(run(wasm, gl, colorShaderInfo, textureShaderInfo, fontShaderInfo));
 }
 
 
@@ -167,9 +175,9 @@ function getKeyIndex(keyCode: string) {
 	}
 }
 
-function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRenderingContext, colorShaderInfo: ColorShaderInfo, textureShaderInfo: TextureShaderInfo) {
+function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRenderingContext, colorShaderInfo: ColorShaderInfo, textureShaderInfo: TextureShaderInfo, fontShaderInfo: FontShaderInfo) {
 	return (frameTimestamp: DOMHighResTimeStamp) => {
-		window.requestAnimationFrame(run(wasm, gl, colorShaderInfo, textureShaderInfo));
+		window.requestAnimationFrame(run(wasm, gl, colorShaderInfo, textureShaderInfo, fontShaderInfo));
 
 		let DEBUGTimestamp = frameTimestamp;
 		wasm.exports.updateAndRender(frameTimestamp);
@@ -296,7 +304,6 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 		}
 		DEBUGTimestamp = DEBUGTime("Draw Triangles", DEBUGTimestamp);
 
-		DEBUGTime("Frame Total", frameTimestamp);
 
 		// TEXTURE SHADER
 		gl.useProgram(textureShaderInfo.program);
@@ -357,6 +364,10 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 		let offset = 0;
 		let count = textureShaderNumberOfVertices;
 		gl.drawArrays(primitiveType, offset, count);
+
+		fontShaderDrawFrame(gl, fontShaderInfo);
+
+		DEBUGTime("Frame Total", frameTimestamp);
 	}
 
 }

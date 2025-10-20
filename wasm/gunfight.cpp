@@ -29,10 +29,14 @@ enum bufferIndex {
   // Texture shader vertex postions to be drawn next frame
   INDEX_TEXTURE_SHADER_A_POSITION,
   // Texture shader texture coordinates for each vertex in aPosition attribute
-  INDEX_TEXTURE_SHADER_A_TEX_COORD
+  INDEX_TEXTURE_SHADER_A_TEX_COORD,
+  // Font shader vertex postions to be drawn next frame
+  INDEX_FONT_SHADER_A_POSITION,
+  // Font shader texture coordinates for each vertex in aPosition attribute
+  INDEX_FONT_SHADER_A_TEX_COORD
 };
 
-global_variable u32 globalBufferSizes[4] = {
+global_variable u32 globalBufferSizes[6] = {
     // ColorShaderAPosition: 2 f32 (4 bytes) per vertex, 3 vertices per
     // triangle, 150 triangles
     3600,
@@ -41,7 +45,13 @@ global_variable u32 globalBufferSizes[4] = {
     // TextureShaderAPosition: 2 f32 (4 bytes) per vertex, 3 vertices per
     // triangle, 150 triangles
     3600,
-    // Texture Shader ATexCoord: same as A position as we want a set of
+    // TextureShaderATexCoord: same as A position as we want a set of
+    // coordinates per vertex
+    3600,
+    // FontShaderAPosition: 2 f32 (4 bytes) per vertex, 3 vertices per
+    // triangle, 150 triangles
+    3600,
+    // FontShaderATexCoord: same as A position as we want a set of
     // coordinates per vertex
     3600};
 
@@ -88,8 +98,7 @@ internal void playerStopInvulnerable(GameState *gameState) {
 
 internal EnemyAIMode enemyPickAIMode() {
   f32 rand = envRandF32();
-  // if(rand < 0.20) {
-  if (1) {
+  if (rand < 0.20) {
     return ENEMY_AI_MOVING_UP;
   } else if (rand < 0.2) {
     return ENEMY_AI_MOVING_DOWN;

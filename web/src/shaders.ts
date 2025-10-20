@@ -39,4 +39,3 @@ export function loadShader(gl: WebGLRenderingContext, type: number, source: stri
 
   return shader;
 }
-

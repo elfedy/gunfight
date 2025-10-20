@@ -35,8 +35,6 @@ export function textureShaderSetup(gl: WebGLRenderingContext): TextureShaderInfo
   let fragmentShaderSource = `
       precision mediump float;
 
-      // This is never set in the code as it defaults to using 
-      // texture unit 0
       uniform sampler2D uImage;
       varying vec2 vTexCoord;
 
