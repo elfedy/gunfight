@@ -41,7 +41,10 @@ export function fontShaderSetup(gl: WebGLRenderingContext): FontShaderInfo {
       varying vec2 vTexCoord;
 
       void main() {
-        gl_FragColor = texture2D(uImage, vTexCoord);
+        vec4 color = texture2D(uImage, vTexCoord);
+	if (color.r < 0.01 && color.g < 0.01 && color.b < 0.01)
+	    discard;
+	gl_FragColor = vec4(color.rgb, 1.0);
       }
     `;
 
@@ -101,20 +104,24 @@ export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: F
 	gl.activeTexture(gl.TEXTURE2);
 	gl.bindTexture(gl.TEXTURE_2D, fontShaderInfo.textures.font);
 
-	let pminx = 10;
-	let pminy = 10;
-	let pmaxx = pminx + 32;
-	let pmaxy = pminy + 32;
+	let positionVertices = [];
+	for (let i = 0; i < 2; i++) {
+		let pminx = 10 + i * 16;
+		let pminy = 10;
+		let pmaxx = pminx + 32;
+		let pmaxy = pminy + 32;
 
-	// Position vertices for a single quad covering the entire atlas
-	let positionVertices = [
-		pminx, pminy,    // bottom-left
-		pminx, pmaxy,    // top-left
-		pmaxx, pminy,    // bottom-right
-		pminx, pmaxy,    // top-left
-		pmaxx, pmaxy,    // top-right
-		pmaxx, pminy     // bottom-right
-	];
+		// Position vertices for a single quad covering the entire atlas
+		positionVertices.push(
+			pminx, pminy,    // bottom-left
+			pminx, pmaxy,    // top-left
+			pmaxx, pminy,    // bottom-right
+			pminx, pmaxy,    // top-left
+			pmaxx, pmaxy,    // top-right
+			pmaxx, pminy     // bottom-right
+		);
+
+	}
 
 	// Provide position coordinates
 	gl.bindBuffer(gl.ARRAY_BUFFER, fontShaderInfo.buffers.aPosition);
@@ -151,20 +158,31 @@ export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: F
 		h: 32
 	};
 
-	let minX = h.x / aWidth;
-	let maxX = (h.x + h.w) / aWidth;
-	let minY = (aHeight - h.y - h.h) / aHeight;
-	let maxY = (aHeight - h.y) / aHeight;
+	let e = {
+		x: 128,
+		y: 64,
+		w: 32,
+		h: 32
+	};
 
-	// Texture coordinates for the entire atlas
-	let textureCoords = [
-		minX, minY,    // bottom-left
-		minX, maxY,    // top-left
-		maxY, minY,    // bottom-right
-		minX, maxY,    // top-left
-		maxX, maxY,    // top-right
-		maxX, minY     // bottom-right
-	];
+	let textureCoords: number[] = [];
+	[h, e].forEach(char => {
+		let minX = char.x / aWidth;
+		let maxX = (char.x + char.w) / aWidth;
+		let minY = (aHeight - char.y - char.h) / aHeight;
+		let maxY = (aHeight - char.y) / aHeight;
+
+		// Texture coordinates for the entire atlas
+		textureCoords.push(
+			minX, minY,    // bottom-left
+			minX, maxY,    // top-left
+			maxX, minY,    // bottom-right
+			minX, maxY,    // top-left
+			maxX, maxY,    // top-right
+			maxX, minY     // bottom-right
+		);
+	})
+
 	let aTexCoordValues = new Float32Array(textureCoords);
 	gl.bufferData(gl.ARRAY_BUFFER, aTexCoordValues, gl.STATIC_DRAW);
 
@@ -176,7 +194,7 @@ export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: F
 
 	let primitiveType = gl.TRIANGLES;
 	let offset = 0;
-	let count = 6; // 6 vertices for 2 triangles
+	let count = 12; // 6 vertices for 2 triangles
 	gl.drawArrays(primitiveType, offset, count);
 
 	// Debug: Check for WebGL errors
