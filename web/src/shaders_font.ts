@@ -79,23 +79,6 @@ export function fontShaderSetup(gl: WebGLRenderingContext): FontShaderInfo {
 	return shaderInfo;
 }
 
-// export function textureShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture: string, shaderInfo: TextureShaderInfo, image: HTMLImageElement, name: string) {
-// 	// Make shader texture the active texture
-// 	// Make the target texture the active gl texture
-// 	gl.activeTexture(gl[glTargetTexture as keyof WebGLRenderingContext] as number);
-// 	// Bind the sprite texture to TEXTURE_2D binding point
-// 	gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures[name as keyof typeof shaderInfo.textures]);
-//
-// 	// Set texture parameters
-// 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-// 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-// 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-// 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-//
-// 	// Upload sprite image to the GPU's texture object
-// 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-// }
-//
 export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: FontShaderInfo) {
 	// FONT SHADER
 	gl.useProgram(fontShaderInfo.program);
@@ -208,7 +191,7 @@ export function fontShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture:
 	// Make shader texture the active texture
 	// Make the target texture the active gl texture
 	gl.activeTexture(gl[glTargetTexture as keyof WebGLRenderingContext] as number);
-	// Bind the sprite texture to TEXTURE_2D binding point
+	// Bind the font texture to TEXTURE_2D binding point
 	gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures.font);
 
 	// Set texture parameters
@@ -217,6 +200,6 @@ export function fontShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture:
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 
-	// Upload sprite image to the GPU's texture object
+	// Upload font image to the GPU's texture object
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
 }
