@@ -11,6 +11,9 @@ export interface WasmExports {
 	/** Returns number of triangles for the texture shader */
 	textureShaderGetTrianglesCount(): number; // u32
 
+	/** Returns number of triangles for the font shader */
+	fontShaderGetTrianglesCount(): number; // u32
+
 	/** Handles controller input events */
 	processControllerInput(keyIndex: number, isDown: number): void; // (u32, bool32)
 

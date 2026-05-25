@@ -1,5 +1,6 @@
 import { Mat3Utils } from "./math";
 import { initShaderProgram } from "./shaders";
+import { WasmExports } from "./exports";
 
 export interface FontShaderInfo {
 	program: WebGLProgram,
@@ -79,34 +80,22 @@ export function fontShaderSetup(gl: WebGLRenderingContext): FontShaderInfo {
 	return shaderInfo;
 }
 
-export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: FontShaderInfo) {
-	// FONT SHADER
+export function fontShaderDrawFrame(
+	gl: WebGLRenderingContext,
+	fontShaderInfo: FontShaderInfo,
+	wasm: WebAssembly.Instance & { exports: WasmExports },
+	wasmMemory: WebAssembly.Memory,
+) {
 	gl.useProgram(fontShaderInfo.program);
 
-	// Ensure texture unit 2 is active and bound
 	gl.activeTexture(gl.TEXTURE2);
 	gl.bindTexture(gl.TEXTURE_2D, fontShaderInfo.textures.font);
 
-	let positionVertices = [];
-	for (let i = 0; i < 2; i++) {
-		let pminx = 10 + i * 16;
-		let pminy = 10;
-		let pmaxx = pminx + 32;
-		let pmaxy = pminy + 32;
+	let numberOfTriangles = wasm.exports.fontShaderGetTrianglesCount();
+	let numberOfVertices = numberOfTriangles * 3;
+	let pointsPerVertex = 2;
+	let bytesPerFloat32 = 4;
 
-		// Position vertices for a single quad covering the entire atlas
-		positionVertices.push(
-			pminx, pminy,    // bottom-left
-			pminx, pmaxy,    // top-left
-			pmaxx, pminy,    // bottom-right
-			pminx, pmaxy,    // top-left
-			pmaxx, pmaxy,    // top-right
-			pmaxx, pminy     // bottom-right
-		);
-
-	}
-
-	// Provide position coordinates
 	gl.bindBuffer(gl.ARRAY_BUFFER, fontShaderInfo.buffers.aPosition);
 	gl.vertexAttribPointer(
 		fontShaderInfo.locations.aPosition,
@@ -117,10 +106,12 @@ export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: F
 		0 // offset: where to start reading data from the buffer
 	);
 
-	let aPositionValues = new Float32Array(positionVertices);
+	let aPositionBufferBase = wasm.exports.getBufferBase(4);
+	let aPositionBufferEnd = aPositionBufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32;
+	let aPositionSlice = wasmMemory.buffer.slice(aPositionBufferBase, aPositionBufferEnd);
+	let aPositionValues = new Float32Array(aPositionSlice);
 	gl.bufferData(gl.ARRAY_BUFFER, aPositionValues, gl.STATIC_DRAW);
 
-	// Provide texture coordinates - use the entire texture (0,0) to (1,1)
 	gl.bindBuffer(gl.ARRAY_BUFFER, fontShaderInfo.buffers.aTexCoord);
 	gl.vertexAttribPointer(
 		fontShaderInfo.locations.aTexCoord,
@@ -131,60 +122,16 @@ export function fontShaderDrawFrame(gl: WebGLRenderingContext, fontShaderInfo: F
 		0 // offset: where to start reading data from the buffer
 	);
 
-	let aWidth = 512;
-	let aHeight = 192;
-
-	let h = {
-		x: 224,
-		y: 64,
-		w: 32,
-		h: 32
-	};
-
-	let e = {
-		x: 128,
-		y: 64,
-		w: 32,
-		h: 32
-	};
-
-	let textureCoords: number[] = [];
-	[h, e].forEach(char => {
-		let minX = char.x / aWidth;
-		let maxX = (char.x + char.w) / aWidth;
-		let minY = (aHeight - char.y - char.h) / aHeight;
-		let maxY = (aHeight - char.y) / aHeight;
-
-		// Texture coordinates for the entire atlas
-		textureCoords.push(
-			minX, minY,    // bottom-left
-			minX, maxY,    // top-left
-			maxX, minY,    // bottom-right
-			minX, maxY,    // top-left
-			maxX, maxY,    // top-right
-			maxX, minY     // bottom-right
-		);
-	})
-
-	let aTexCoordValues = new Float32Array(textureCoords);
+	let aTexCoordBufferBase = wasm.exports.getBufferBase(5);
+	let aTexCoordBufferEnd = aTexCoordBufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32;
+	let aTexCoordSlice = wasmMemory.buffer.slice(aTexCoordBufferBase, aTexCoordBufferEnd);
+	let aTexCoordValues = new Float32Array(aTexCoordSlice);
 	gl.bufferData(gl.ARRAY_BUFFER, aTexCoordValues, gl.STATIC_DRAW);
 
-	// Set projection matrix data
 	gl.uniformMatrix3fv(fontShaderInfo.locations.uMatrix, false, Mat3Utils.projection(gl.canvas.width, gl.canvas.height));
-
-	// Use texture unit 2 for the font atlas
 	gl.uniform1i(fontShaderInfo.locations.uImage, 2);
 
-	let primitiveType = gl.TRIANGLES;
-	let offset = 0;
-	let count = 12; // 6 vertices for 2 triangles
-	gl.drawArrays(primitiveType, offset, count);
-
-	// Debug: Check for WebGL errors
-	let error = gl.getError();
-	if (error !== gl.NO_ERROR) {
-		console.error("WebGL error in font rendering:", error);
-	}
+	gl.drawArrays(gl.TRIANGLES, 0, numberOfVertices);
 }
 
 export function fontShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture: string, shaderInfo: FontShaderInfo, image: HTMLImageElement) {

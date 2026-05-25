@@ -17,6 +17,7 @@ global_variable GameControllerInput globalGameControllerInputLastFrame = {};
 
 global_variable u32 globalColorShaderFrameTrianglesCount = 0;
 global_variable u32 globalTextureShaderFrameTrianglesCount = 0;
+global_variable u32 globalFontShaderFrameTrianglesCount = 0;
 
 // GLOBAL BUFFERS
 
@@ -77,6 +78,10 @@ extern "C" export u32 textureShaderGetTrianglesCount() {
   return globalTextureShaderFrameTrianglesCount;
 }
 
+extern "C" export u32 fontShaderGetTrianglesCount() {
+  return globalFontShaderFrameTrianglesCount;
+}
+
 // TODO: This should throw an error on buffer overflow
 // buffer should have A len
 internal void bufferPushF32(Buffer *buffer, f32 value) {
@@ -118,19 +123,24 @@ extern "C" export void processControllerInput(u32 keyIndex, bool32 isDown) {
 
 // RENDER
 internal void endRenderFrame(ColorShaderFrame *colorShaderFrame,
-                             TextureShaderFrame *textureShaderFrame) {
+                             TextureShaderFrame *textureShaderFrame,
+                             FontShaderFrame *fontShaderFrame) {
   globalColorShaderFrameTrianglesCount = colorShaderFrame->trianglesCount;
   globalTextureShaderFrameTrianglesCount = textureShaderFrame->trianglesCount;
+  globalFontShaderFrameTrianglesCount = fontShaderFrame->trianglesCount;
 }
 
 internal void renderGameOver(ColorShaderFrame *colorShaderFrame,
                              TextureShaderFrame *textureShaderFrame,
-                             f32 levelWidth, f32 levelHeight) {
+                             FontShaderFrame *fontShaderFrame, f32 levelWidth,
+                             f32 levelHeight) {
   V2 min = {0, 0};
   V2 max = {levelWidth, levelHeight};
   Color color = {0.0f, 0.0f, 0.0f, 1.0f};
   colorShaderDrawRectangle(colorShaderFrame, color, min, max);
-  endRenderFrame(colorShaderFrame, textureShaderFrame);
+  fontShaderDrawCharset(fontShaderFrame, "GAMEOVER",
+                        V2{levelWidth * 0.33f, levelHeight * 0.4f}, 2.0f);
+  endRenderFrame(colorShaderFrame, textureShaderFrame, fontShaderFrame);
 }
 
 extern "C" export void updateAndRender(f64 timestamp) {
@@ -180,12 +190,13 @@ extern "C" export void updateAndRender(f64 timestamp) {
   // Initialize Shader Frames
   ColorShaderFrame colorShaderFrame = colorShaderFrameInit();
   TextureShaderFrame textureShaderFrame = textureShaderFrameInit();
+  FontShaderFrame fontShaderFrame = fontShaderFrameInit();
 
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
 
   if (globalGameState.gameOver) {
-    renderGameOver(&colorShaderFrame, &textureShaderFrame, levelWidthInPixels,
-                   levelHeightInPixels);
+    renderGameOver(&colorShaderFrame, &textureShaderFrame, &fontShaderFrame,
+                   levelWidthInPixels, levelHeightInPixels);
     return;
   }
 
@@ -377,7 +388,8 @@ extern "C" export void updateAndRender(f64 timestamp) {
             } else {
               globalGameState.gameOver = true;
               renderGameOver(&colorShaderFrame, &textureShaderFrame,
-                             levelWidthInPixels, levelHeightInPixels);
+                             &fontShaderFrame, levelWidthInPixels,
+                             levelHeightInPixels);
               return;
             }
           }
@@ -584,9 +596,9 @@ extern "C" export void updateAndRender(f64 timestamp) {
                              heartBottomLeft, heartTopRight);
   }
 
-  // Update globals
-  globalColorShaderFrameTrianglesCount = colorShaderFrame.trianglesCount;
-  globalTextureShaderFrameTrianglesCount = textureShaderFrame.trianglesCount;
+  fontShaderDrawCharset(&fontShaderFrame, "AAAAA", V2{200.0f, 200.0f}, 4.0f);
+
+  endRenderFrame(&colorShaderFrame, &textureShaderFrame, &fontShaderFrame);
 
   globalLastTimestamp = timestamp;
   globalGameControllerInputLastFrame = globalGameControllerInputCurrent;

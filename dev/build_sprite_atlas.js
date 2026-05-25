@@ -4,14 +4,14 @@ const path = require('path');
 
 const IMAGE_PATH = './dev/sprite_atlas_assets';
 
-const imageMetadata =  [
+const imageMetadata = [
   {
-   filename: 'player.png',
-   id: 'PLAYER',
+    filename: 'player.png',
+    id: 'PLAYER',
   },
   {
-   filename: 'enemy_shooter.png',
-   id: 'ENEMY_SHOOTER',
+    filename: 'enemy_shooter.png',
+    id: 'ENEMY_SHOOTER',
   },
   {
     filename: 'heart.png',
@@ -27,7 +27,7 @@ imageMetadata.forEach(metadata => {
   const buffer = Buffer.alloc(size);
   fs.readSync(file_fd, buffer, 0, size, 0);
 
-  if(buffer.toString('ascii', 12, 16) === 'CgBI') {
+  if (buffer.toString('ascii', 12, 16) === 'CgBI') {
     metadata.width = buffer.readUInt32BE(32);
     metadata.height = buffer.readUInt32BE(36);
   } else {
@@ -47,7 +47,7 @@ imageMetadataReversed.forEach((metadata, index) => {
   totalHeight += metadata.height;
 
   metadata.x = 0;
-  if(index === 0) {
+  if (index === 0) {
     metadata.y = 0;
   } else {
     const previousMetadata = imageMetadataReversed[index - 1];
@@ -55,23 +55,22 @@ imageMetadataReversed.forEach((metadata, index) => {
   }
 });
 
-// TODO: Armar el archivo en c
 const command = `montage ${imageMetadata.map(metadata => filepath(metadata)).join(' ')} -tile 1x -geometry +0+0 -background none ./assets/sprite_atlas.png`;
 exec(command, (error, stdout, stderr) => {
-    console.log(stdout);
-    if(error) {
-      console.log(`error: ${error.message}`);
-    }
-    if(stderr) {
-      console.log(`stderr: ${stderr}`);
-    }
+  console.log(stdout);
+  if (error) {
+    console.log(`error: ${error.message}`);
+  }
+  if (stderr) {
+    console.log(`stderr: ${stderr}`);
+  }
 })
 
 let textureIndices = imageMetadata.map(id => 'SPRITE_ATLAS_' + id.id).join(',\n  ');
 
 const getSpriteAtlasMetadata = (textureMetadata, atlasTotalWidth, atlasTotalHeight) => {
-  const minX  = (textureMetadata.x / atlasTotalWidth);
-  const minY  = (textureMetadata.y / atlasTotalHeight);
+  const minX = (textureMetadata.x / atlasTotalWidth);
+  const minY = (textureMetadata.y / atlasTotalHeight);
   const maxX = (textureMetadata.x + textureMetadata.width) / atlasTotalWidth;
   const maxY = (textureMetadata.y + textureMetadata.height) / atlasTotalHeight;
 
@@ -124,4 +123,4 @@ global_variable SpriteAtlasMetadata globalSpriteAtlasMetadata = {
 #endif
 `
 
-fs.writeFileSync('./wasm/gunfight_sprite_atlas.h', spriteAtlasFileContent, {encoding:'utf8',flag:'w'})
+fs.writeFileSync('./wasm/gunfight_sprite_atlas.h', spriteAtlasFileContent, { encoding: 'utf8', flag: 'w' })

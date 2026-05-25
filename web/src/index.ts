@@ -13,9 +13,6 @@ const GlobalConfig = {
 let wasmMemory = new WebAssembly.Memory({ initial: 160, maximum: 160 });
 let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
 
-let charset = null;
-fetch("charset.json").then(r => r.json()).then(j => { charset = j; console.log(charset); });
-
 interface Context {
 	wasm: WebAssembly.WebAssemblyInstantiatedSource | null,
 	images: Array<HTMLImageElement>,
@@ -365,7 +362,7 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 		let count = textureShaderNumberOfVertices;
 		gl.drawArrays(primitiveType, offset, count);
 
-		fontShaderDrawFrame(gl, fontShaderInfo);
+		fontShaderDrawFrame(gl, fontShaderInfo, wasm, wasmMemory);
 
 		DEBUGTime("Frame Total", frameTimestamp);
 	}

@@ -20,8 +20,8 @@ const glyphs = Array.from({ length: ASCII_GLYPH_COUNT }, (_, code) => ({
 const getTextureCoordinates = (glyphMetadata) => {
   const minX = glyphMetadata.x / ATLAS_TOTAL_WIDTH;
   const maxX = (glyphMetadata.x + glyphMetadata.w) / ATLAS_TOTAL_WIDTH;
-  const minY = (ATLAS_TOTAL_HEIGHT - glyphMetadata.y - glyphMetadata.h) / ATLAS_TOTAL_HEIGHT;
-  const maxY = (ATLAS_TOTAL_HEIGHT - glyphMetadata.y) / ATLAS_TOTAL_HEIGHT;
+  const minY = glyphMetadata.y / ATLAS_TOTAL_HEIGHT;
+  const maxY = (glyphMetadata.y + glyphMetadata.h) / ATLAS_TOTAL_HEIGHT;
 
   return [
     minX, minY,

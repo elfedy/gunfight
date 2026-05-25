@@ -1,4 +1,5 @@
 #include "gunfight_sprite_atlas.h"
+#include "gunfight_charset.h"
 
 // Data about what the color shader should draw on the next frame
 struct ColorShaderFrame {
@@ -133,4 +134,74 @@ internal void textureShaderDrawTexture(TextureShaderFrame *textureShaderFrame,
                                    &textureShaderFrame->aTexCoordBuffer);
 
   textureShaderFrame->trianglesCount += 2;
+}
+
+internal void setATexCoordValsFromCharsetCode(u32 code, Buffer *buffer) {
+  if (code >= arrayLength(globalCharsetMetadata.glyphs)) {
+    return;
+  }
+
+  CharsetGlyphMetadata glyphMetadata = globalCharsetMetadata.glyphs[code];
+
+  for (int i = 0; i < 12; ++i) {
+    bufferPushF32(buffer, glyphMetadata.textureCoordinates[i]);
+  }
+}
+
+internal void fontShaderDrawCharset(FontShaderFrame *fontShaderFrame,
+                                    const char *text, V2 min,
+                                    f32 sizeMultiplier) {
+  f32 cursorX = min.x;
+  f32 cursorY = min.y;
+  f32 lineStartX = min.x;
+  f32 defaultAdvance = 32.0f * sizeMultiplier;
+  f32 lineHeight = 32.0f * sizeMultiplier;
+
+  for (const char *current = text; *current != '\0'; ++current) {
+    u32 code = (u8)*current;
+
+    if (code == '\n') {
+      cursorX = lineStartX;
+      cursorY += lineHeight;
+      continue;
+    }
+
+    if (code == ' ') {
+      cursorX += defaultAdvance;
+      continue;
+    }
+
+    if (code >= arrayLength(globalCharsetMetadata.glyphs)) {
+      cursorX += defaultAdvance;
+      continue;
+    }
+
+    CharsetGlyphMetadata glyphMetadata = globalCharsetMetadata.glyphs[code];
+    f32 glyphWidth = glyphMetadata.width * sizeMultiplier;
+    f32 glyphHeight = glyphMetadata.height * sizeMultiplier;
+
+    if (glyphWidth == 0 || glyphHeight == 0) {
+      cursorX += defaultAdvance;
+      continue;
+    }
+
+    f32 aPositionVals[12] = {
+        cursorX, cursorY,
+        cursorX + glyphWidth, cursorY,
+        cursorX, cursorY + glyphHeight,
+        cursorX, cursorY + glyphHeight,
+        cursorX + glyphWidth, cursorY,
+        cursorX + glyphWidth, cursorY + glyphHeight,
+    };
+
+    Buffer *aPositionBuffer = &fontShaderFrame->aPositionBuffer;
+    for (int i = 0; i < arrayLength(aPositionVals); ++i) {
+      bufferPushF32(aPositionBuffer, aPositionVals[i]);
+    }
+
+    setATexCoordValsFromCharsetCode(code, &fontShaderFrame->aTexCoordBuffer);
+
+    fontShaderFrame->trianglesCount += 2;
+    cursorX += glyphWidth;
+  }
 }
