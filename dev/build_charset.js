@@ -25,11 +25,11 @@ const getTextureCoordinates = (glyphMetadata) => {
 
   return [
     minX, minY,
-    minX, maxY,
     maxX, minY,
     minX, maxY,
+    minX, maxY,
+    maxX, minY,
     maxX, maxY,
-    maxX, minY,
   ];
 };
 
