@@ -1,5 +1,5 @@
-#include "gunfight_sprite_atlas.h"
 #include "gunfight_charset.h"
+#include "gunfight_sprite_atlas.h"
 
 // Data about what the color shader should draw on the next frame
 struct ColorShaderFrame {
@@ -81,23 +81,36 @@ FontShaderFrame fontShaderFrameInit() {
 }
 
 // DRAW
+internal void pushRectangleVertices(V2 min, V2 max, Buffer *buffer) {
+  bufferPushF32(buffer, min.x);
+  bufferPushF32(buffer, min.y);
+
+  bufferPushF32(buffer, max.x);
+  bufferPushF32(buffer, min.y);
+
+  bufferPushF32(buffer, min.x);
+  bufferPushF32(buffer, max.y);
+
+  bufferPushF32(buffer, min.x);
+  bufferPushF32(buffer, max.y);
+
+  bufferPushF32(buffer, max.x);
+  bufferPushF32(buffer, min.y);
+
+  bufferPushF32(buffer, max.x);
+  bufferPushF32(buffer, max.y);
+}
+
 internal void colorShaderDrawRectangle(ColorShaderFrame *colorShaderFrame,
                                        Color color, V2 min, V2 max) {
-  f32 vertices[12] = {
-      min.x, min.y, min.x, max.y, max.x, max.y,
-      min.x, min.y, max.x, min.y, max.x, max.y,
-  };
-
   Buffer *aPositionBuffer = &colorShaderFrame->aPositionBuffer;
   Buffer *uColorsBuffer = &colorShaderFrame->uColorsBuffer;
 
-  for (int i = 0; i < arrayLength(vertices); i++) {
-    bufferPushF32(aPositionBuffer, vertices[i]);
-  }
+  pushRectangleVertices(min, max, aPositionBuffer);
 
   // every three vertices pairs (triangle) we need to specify color and
   // increment triangles count
-  for (int i = 0; i < arrayLength(vertices) / 6; i++) {
+  for (int i = 0; i < 2; i++) {
     bufferPushF32(uColorsBuffer, color.r);
     bufferPushF32(uColorsBuffer, color.g);
     bufferPushF32(uColorsBuffer, color.b);
@@ -119,16 +132,9 @@ internal void setATexCoordValsFromTextureIndex(int textureIndex,
 
 internal void textureShaderDrawTexture(TextureShaderFrame *textureShaderFrame,
                                        int textureIndex, V2 min, V2 max) {
-  f32 aPositionVals[12] = {
-      min.x, min.y, max.x, min.y, min.x, max.y,
-      min.x, max.y, max.x, min.y, max.x, max.y,
-  };
-
   Buffer *aPositionBuffer = &textureShaderFrame->aPositionBuffer;
 
-  for (int i = 0; i < arrayLength(aPositionVals); i++) {
-    bufferPushF32(aPositionBuffer, aPositionVals[i]);
-  }
+  pushRectangleVertices(min, max, aPositionBuffer);
 
   setATexCoordValsFromTextureIndex(textureIndex,
                                    &textureShaderFrame->aTexCoordBuffer);
@@ -137,15 +143,35 @@ internal void textureShaderDrawTexture(TextureShaderFrame *textureShaderFrame,
 }
 
 internal void setATexCoordValsFromCharsetCode(u32 code, Buffer *buffer) {
-  if (code >= arrayLength(globalCharsetMetadata.glyphs)) {
-    return;
-  }
+  assert(code < arrayLength(globalCharsetMetadata.glyphs));
 
   CharsetGlyphMetadata glyphMetadata = globalCharsetMetadata.glyphs[code];
 
-  for (int i = 0; i < 12; ++i) {
-    bufferPushF32(buffer, glyphMetadata.textureCoordinates[i]);
-  }
+  f32 minU = (f32)glyphMetadata.x / (f32)globalCharsetMetadata.totalWidth;
+  f32 minV = (f32)glyphMetadata.y / (f32)globalCharsetMetadata.totalHeight;
+  f32 maxU = (f32)(glyphMetadata.x + globalCharsetMetadata.glyphWidth) /
+             (f32)globalCharsetMetadata.totalWidth;
+  f32 maxV = (f32)(glyphMetadata.y + globalCharsetMetadata.glyphHeight) /
+             (f32)globalCharsetMetadata.totalHeight;
+
+  bufferPushF32(buffer, minU);
+  bufferPushF32(buffer, minV);
+
+  bufferPushF32(buffer, maxU);
+  bufferPushF32(buffer, minV);
+
+  bufferPushF32(buffer, minU);
+  bufferPushF32(buffer, maxV);
+
+  bufferPushF32(buffer, minU);
+  bufferPushF32(buffer, maxV);
+
+  bufferPushF32(buffer, maxU);
+  bufferPushF32(buffer, minV);
+
+  bufferPushF32(buffer, maxU);
+  bufferPushF32(buffer, maxV);
+
 }
 
 internal void fontShaderDrawCharset(FontShaderFrame *fontShaderFrame,
@@ -154,8 +180,10 @@ internal void fontShaderDrawCharset(FontShaderFrame *fontShaderFrame,
   f32 cursorX = min.x;
   f32 cursorY = min.y;
   f32 lineStartX = min.x;
-  f32 defaultAdvance = 32.0f * sizeMultiplier;
-  f32 lineHeight = 32.0f * sizeMultiplier;
+  f32 glyphWidth = (f32)globalCharsetMetadata.glyphWidth * sizeMultiplier;
+  f32 glyphHeight = (f32)globalCharsetMetadata.glyphHeight * sizeMultiplier;
+  f32 defaultAdvance = glyphWidth;
+  f32 lineHeight = glyphHeight;
 
   for (const char *current = text; *current != '\0'; ++current) {
     u32 code = (u8)*current;
@@ -171,35 +199,13 @@ internal void fontShaderDrawCharset(FontShaderFrame *fontShaderFrame,
       continue;
     }
 
-    if (code >= arrayLength(globalCharsetMetadata.glyphs)) {
-      cursorX += defaultAdvance;
-      continue;
-    }
+    setATexCoordValsFromCharsetCode(code, &fontShaderFrame->aTexCoordBuffer);
 
-    CharsetGlyphMetadata glyphMetadata = globalCharsetMetadata.glyphs[code];
-    f32 glyphWidth = glyphMetadata.width * sizeMultiplier;
-    f32 glyphHeight = glyphMetadata.height * sizeMultiplier;
-
-    if (glyphWidth == 0 || glyphHeight == 0) {
-      cursorX += defaultAdvance;
-      continue;
-    }
-
-    f32 aPositionVals[12] = {
-        cursorX, cursorY,
-        cursorX + glyphWidth, cursorY,
-        cursorX, cursorY + glyphHeight,
-        cursorX, cursorY + glyphHeight,
-        cursorX + glyphWidth, cursorY,
-        cursorX + glyphWidth, cursorY + glyphHeight,
-    };
+    V2 glyphMin = {cursorX, cursorY};
+    V2 glyphMax = {cursorX + glyphWidth, cursorY + glyphHeight};
 
     Buffer *aPositionBuffer = &fontShaderFrame->aPositionBuffer;
-    for (int i = 0; i < arrayLength(aPositionVals); ++i) {
-      bufferPushF32(aPositionBuffer, aPositionVals[i]);
-    }
-
-    setATexCoordValsFromCharsetCode(code, &fontShaderFrame->aTexCoordBuffer);
+    pushRectangleVertices(glyphMin, glyphMax, aPositionBuffer);
 
     fontShaderFrame->trianglesCount += 2;
     cursorX += glyphWidth;
