@@ -32,11 +32,15 @@ Object.entries(charset).forEach(([char, glyphMetadata]) => {
     throw new Error(`Unexpected glyph size for code ${code}: ${glyphMetadata.w}x${glyphMetadata.h}`);
   }
 
+  // charset.json stores image coordinates from the top-left; shader UVs use the
+  // texture row after WebGL's upload-time Y flip.
+  const textureY = ATLAS_TOTAL_HEIGHT - glyphMetadata.y - GLYPH_HEIGHT;
+
   glyphs[code] = {
     code,
     char,
     x: glyphMetadata.x,
-    y: glyphMetadata.y,
+    y: textureY,
   };
 });
 
