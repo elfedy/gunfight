@@ -597,6 +597,7 @@ extern "C" export void updateAndRender(f64 timestamp) {
   }
 
   fontShaderDrawCharset(&fontShaderFrame, "ABC12", V2{200.0f, 200.0f}, 1.0f);
+  fontShaderDrawCharset(&fontShaderFrame, "qrst", V2{200.0f, 100.0f}, 1.0f);
 
   endRenderFrame(&colorShaderFrame, &textureShaderFrame, &fontShaderFrame);
 

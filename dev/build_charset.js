@@ -13,14 +13,19 @@ const charset = JSON.parse(fs.readFileSync(CHARSET_PATH, 'utf8'));
 
 const glyphs = Array.from({ length: ASCII_GLYPH_COUNT }, (_, code) => ({
   code,
+  char: null,
   x: INVALID_GLYPH_POSITION,
   y: INVALID_GLYPH_POSITION,
 }));
 
-Object.values(charset).forEach((glyphMetadata) => {
+Object.entries(charset).forEach(([char, glyphMetadata]) => {
   const code = glyphMetadata.code;
   if (code < 0 || code >= ASCII_GLYPH_COUNT) {
     return;
+  }
+
+  if (char.length !== 1 || char.codePointAt(0) !== code) {
+    throw new Error(`Unexpected glyph char for code ${code}: ${char}`);
   }
 
   if (glyphMetadata.w !== GLYPH_WIDTH || glyphMetadata.h !== GLYPH_HEIGHT) {
@@ -29,16 +34,42 @@ Object.values(charset).forEach((glyphMetadata) => {
 
   glyphs[code] = {
     code,
+    char,
     x: glyphMetadata.x,
     y: glyphMetadata.y,
   };
 });
 
-const formatGlyph = (glyph) => `{
-    ${glyph.code},
+const formatCharLiteralValue = (char) => {
+  if (char === "'") {
+    return "\\'";
+  }
+
+  if (char === "\\") {
+    return "\\\\";
+  }
+
+  return char;
+};
+
+const formatGlyphCode = (glyph) => {
+  if (!glyph.char) {
+    return `${glyph.code}`;
+  }
+
+  return `'${formatCharLiteralValue(glyph.char)}'`;
+};
+
+const formatGlyph = (glyph) => {
+  const glyphCode = formatGlyphCode(glyph);
+  const glyphComment = glyph.char ? ` // '${formatCharLiteralValue(glyph.char)}' (${glyph.code})` : '';
+
+  return `{
+    ${glyphCode},${glyphComment}
     ${glyph.x},
     ${glyph.y}
   }`;
+};
 
 const charsetFileContent = `#if !defined(GUNFIGHT_CHARSET)
 struct CharsetGlyphMetadata {
