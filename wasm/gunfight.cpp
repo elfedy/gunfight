@@ -138,7 +138,7 @@ internal void renderGameOver(ColorShaderFrame *colorShaderFrame,
   V2 max = {levelWidth, levelHeight};
   Color color = {0.0f, 0.0f, 0.0f, 1.0f};
   colorShaderDrawRectangle(colorShaderFrame, color, min, max);
-  fontShaderDrawCharset(fontShaderFrame, "GAMEOVER",
+  fontShaderDrawCharset(fontShaderFrame, "GAME OVER",
                         V2{levelWidth * 0.33f, levelHeight * 0.4f}, 2.0f);
   endRenderFrame(colorShaderFrame, textureShaderFrame, fontShaderFrame);
 }
@@ -595,9 +595,6 @@ extern "C" export void updateAndRender(f64 timestamp) {
     textureShaderDrawTexture(&textureShaderFrame, SPRITE_ATLAS_HEART,
                              heartBottomLeft, heartTopRight);
   }
-
-  fontShaderDrawCharset(&fontShaderFrame, "ABC12", V2{200.0f, 200.0f}, 1.0f);
-  fontShaderDrawCharset(&fontShaderFrame, "qrst", V2{200.0f, 100.0f}, 1.0f);
 
   endRenderFrame(&colorShaderFrame, &textureShaderFrame, &fontShaderFrame);
 
