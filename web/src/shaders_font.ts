@@ -43,8 +43,10 @@ export function fontShaderSetup(gl: WebGLRenderingContext): FontShaderInfo {
 
       void main() {
         vec4 color = texture2D(uImage, vTexCoord);
-	if (color.r < 0.01 && color.g < 0.01 && color.b < 0.01)
+	// discard black background for the font
+	if (color.r < 0.01 && color.g < 0.01 && color.b < 0.01) {
 	    discard;
+	}
 	gl_FragColor = vec4(color.rgb, 1.0);
       }
     `;

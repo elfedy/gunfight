@@ -139,18 +139,17 @@ internal void renderGameOver(ColorShaderFrame *colorShaderFrame,
   Color color = {0.0f, 0.0f, 0.0f, 1.0f};
   colorShaderDrawRectangle(colorShaderFrame, color, min, max);
 
-  f32 scale = 1.0f;
-  // f32 textLength =
-  //     arrayLength("GAME OVER") * globalCharsetMetadata.glyphWidth * scale;
-  // f32 textHeight = globalCharsetMetadata.glyphHeight * scale;
-  // assert(levelWidth >= textLength);
-  // assert(levelHeight >= textHeight);
-  // f32 centerX = levelWidth - textLength / 2;
-  // f32 centerY = levelHeight - textHeight / 2;
-  f32 centerX = globalCharsetMetadata.glyphWidth;
-  f32 centerY = globalCharsetMetadata.glyphHeight;
+  f32 scale = 2.0f;
+  char gameOverText[] = "GAME OVER";
+  f32 textLength = (arrayLength(gameOverText) - 1) *
+                   globalCharsetMetadata.glyphWidth * scale;
+  f32 textHeight = globalCharsetMetadata.glyphHeight * scale;
+  assert(levelWidth >= textLength);
+  assert(levelHeight >= textHeight);
+  f32 centerX = (levelWidth - textLength) / 2;
+  f32 centerY = (levelHeight - textHeight) / 2;
 
-  fontShaderDrawCharset(fontShaderFrame, "GAME OVER", V2{centerX, centerY},
+  fontShaderDrawCharset(fontShaderFrame, gameOverText, V2{centerX, centerY},
                         scale);
   endRenderFrame(colorShaderFrame, textureShaderFrame, fontShaderFrame);
 }
@@ -193,8 +192,7 @@ extern "C" export void updateAndRender(f64 timestamp) {
     globalGameState.enemiesCurrentCount = 0;
     globalGameState.enemyNextSpawn = (timestamp + seconds(2));
 
-    // globalGameState.gameOver = false;
-    globalGameState.gameOver = true;
+    globalGameState.gameOver = false;
 
     globalLastTimestamp = timestamp;
     globalIsInitialized = 1;
