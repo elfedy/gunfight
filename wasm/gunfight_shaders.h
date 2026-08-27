@@ -15,7 +15,7 @@ struct TextureShaderFrame {
   Buffer aTexCoordBuffer;
 };
 
-// Data for the texture shader to draw on the current frame
+// Data for the font shader to draw on the current frame
 struct FontShaderFrame {
   u32 trianglesCount;
   Buffer aPositionBuffer;
@@ -171,7 +171,6 @@ internal void setATexCoordValsFromCharsetCode(u32 code, Buffer *buffer) {
 
   bufferPushF32(buffer, maxU);
   bufferPushF32(buffer, maxV);
-
 }
 
 internal void fontShaderDrawCharset(FontShaderFrame *fontShaderFrame,

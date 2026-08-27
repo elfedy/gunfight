@@ -28,7 +28,9 @@ let context: Context = {
 const imageUrls = [
 	'sprite_atlas.png',
 	'background.png',
-	'font_atlas.png',
+	'start.png',
+	'game_over.png',
+	'font_atlas.png'
 ];
 
 imageUrls.forEach((imageUrl, index) => {
@@ -126,9 +128,11 @@ function initializeGameLoop(context: Context) {
 	let textureShaderInfo = textureShaderSetup(gl);
 	textureShaderSetTexture(gl, 'TEXTURE0', textureShaderInfo, context.images[0], 'sprite');
 	textureShaderSetTexture(gl, 'TEXTURE1', textureShaderInfo, context.images[1], 'background');
+	textureShaderSetTexture(gl, 'TEXTURE2', textureShaderInfo, context.images[2], 'start');
+	textureShaderSetTexture(gl, 'TEXTURE3', textureShaderInfo, context.images[3], 'game_over');
 
 	let fontShaderInfo = fontShaderSetup(gl);
-	fontShaderSetTexture(gl, 'TEXTURE2', fontShaderInfo, context.images[2]);
+	fontShaderSetTexture(gl, 'TEXTURE4', fontShaderInfo, context.images[4]);
 
 	// Setup event listeners
 	const processKeyChange = (keyCode: string, isDown: number) => {
@@ -272,7 +276,7 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 				vertexBufferBase + numberOfVertices * pointsPerVertex * bytesPerFloat32
 			);
 		let vertexBuffer = new Float32Array(vertexSlice);
-		// Populate buffer bound to array buffer with the vetices needed to be drawn
+		// Populate buffer bound to array buffer with the vertices needed to be drawn
 		gl.bufferData(gl.ARRAY_BUFFER, vertexBuffer, gl.STATIC_DRAW);
 
 		let colorBufferUnitSize = 4 * bytesPerFloat32; // 4 f32s per color

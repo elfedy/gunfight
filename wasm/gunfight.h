@@ -72,6 +72,7 @@ struct GameState {
   f64 playerAnimationInvulnerableLastTransition;
   bool32 playerAnimationInvulnerableIsShowing;
 
+  bool32 intro;
   bool32 gameOver;
 
   u32 playerBulletCount;

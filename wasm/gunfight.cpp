@@ -130,6 +130,47 @@ internal void endRenderFrame(ColorShaderFrame *colorShaderFrame,
   globalFontShaderFrameTrianglesCount = fontShaderFrame->trianglesCount;
 }
 
+internal void renderIntro(ColorShaderFrame *colorShaderFrame,
+                          TextureShaderFrame *textureShaderFrame,
+                          FontShaderFrame *fontShaderFrame, f32 levelWidth,
+                          f32 levelHeight) {
+  V2 min = {0, 0};
+  V2 max = {levelWidth, levelHeight};
+  Color color = {0.0f, 0.0f, 0.0f, 1.0f};
+  colorShaderDrawRectangle(colorShaderFrame, color, min, max);
+
+  {
+    f32 gunfightScale = 2.0f;
+    char gunfightText[] = "GUNFIGHT";
+    f32 textLength = (arrayLength(gunfightText) - 1) *
+                     globalCharsetMetadata.glyphWidth * gunfightScale;
+    f32 textHeight = globalCharsetMetadata.glyphHeight * gunfightScale;
+    assert(levelWidth >= textLength);
+    assert(levelHeight >= textHeight);
+    f32 centerX = (levelWidth - textLength) / 2;
+    f32 centerY = (levelHeight - textHeight) / 2;
+
+    fontShaderDrawCharset(fontShaderFrame, gunfightText, V2{centerX, centerY},
+                          gunfightScale);
+  }
+
+  {
+    f32 instructionsScale = .9f;
+    char instructionsText[] = "Press Enter";
+    f32 textLength = (arrayLength(instructionsText) - 1) *
+                     globalCharsetMetadata.glyphWidth * instructionsScale;
+    f32 textHeight = globalCharsetMetadata.glyphHeight * instructionsScale;
+    assert(levelWidth >= textLength);
+    assert(levelHeight >= textHeight);
+    f32 centerX = (levelWidth - textLength) / 2;
+    f32 centerY = (levelHeight - textHeight) / 3;
+
+    fontShaderDrawCharset(fontShaderFrame, instructionsText,
+                          V2{centerX, centerY}, instructionsScale);
+  }
+  endRenderFrame(colorShaderFrame, textureShaderFrame, fontShaderFrame);
+}
+
 internal void renderGameOver(ColorShaderFrame *colorShaderFrame,
                              TextureShaderFrame *textureShaderFrame,
                              FontShaderFrame *fontShaderFrame, f32 levelWidth,
@@ -192,6 +233,7 @@ extern "C" export void updateAndRender(f64 timestamp) {
     globalGameState.enemiesCurrentCount = 0;
     globalGameState.enemyNextSpawn = (timestamp + seconds(2));
 
+    globalGameState.intro = true;
     globalGameState.gameOver = false;
 
     globalLastTimestamp = timestamp;
@@ -204,6 +246,12 @@ extern "C" export void updateAndRender(f64 timestamp) {
   FontShaderFrame fontShaderFrame = fontShaderFrameInit();
 
   f32 dt = (f32)((timestamp - globalLastTimestamp) / 1000.0f); // in seconds
+
+  if (globalGameState.intro) {
+    renderIntro(&colorShaderFrame, &textureShaderFrame, &fontShaderFrame,
+                levelWidthInPixels, levelHeightInPixels);
+    return;
+  }
 
   if (globalGameState.gameOver) {
     renderGameOver(&colorShaderFrame, &textureShaderFrame, &fontShaderFrame,

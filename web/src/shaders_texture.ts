@@ -15,6 +15,8 @@ export interface TextureShaderInfo {
   textures: {
     sprite: WebGLTexture,
     background: WebGLTexture,
+    start: WebGLTexture,
+    gameOver: WebGLTexture,
   }
 
 }
@@ -60,6 +62,8 @@ export function textureShaderSetup(gl: WebGLRenderingContext): TextureShaderInfo
     textures: {
       sprite: gl.createTexture()!,
       background: gl.createTexture()!,
+      start: gl.createTexture()!,
+      gameOver: gl.createTexture()!,
     }
   };
 
