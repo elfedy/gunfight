@@ -1,5 +1,7 @@
 import { initShaderProgram } from "./shaders";
 
+export const textureShaderFiles = ["sprite_atlas.png", "background.png", "start.png", "game_over.png"];
+
 export interface TextureShaderInfo {
   program: WebGLProgram,
   buffers: {
@@ -79,10 +81,8 @@ export function textureShaderSetup(gl: WebGLRenderingContext): TextureShaderInfo
   return shaderInfo;
 }
 
-export function textureShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture: string, shaderInfo: TextureShaderInfo, image: HTMLImageElement, name: string) {
+export function textureShaderSetTexture(gl: WebGLRenderingContext, shaderInfo: TextureShaderInfo, image: HTMLImageElement, name: string) {
   // Make shader texture the active texture
-  // Make the target texture the active gl texture
-  gl.activeTexture(gl[glTargetTexture as keyof WebGLRenderingContext] as number);
   // Bind the sprite texture to TEXTURE_2D binding point
   gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures[name as keyof typeof shaderInfo.textures]);
 

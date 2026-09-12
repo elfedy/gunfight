@@ -2,6 +2,8 @@ import { Mat3Utils } from "./math";
 import { initShaderProgram } from "./shaders";
 import { WasmExports } from "./exports";
 
+export const fontShaderFiles = ["font_atlas.png"];
+
 export interface FontShaderInfo {
 	program: WebGLProgram,
 	buffers: {
@@ -90,7 +92,6 @@ export function fontShaderDrawFrame(
 ) {
 	gl.useProgram(fontShaderInfo.program);
 
-	gl.activeTexture(gl.TEXTURE2);
 	gl.bindTexture(gl.TEXTURE_2D, fontShaderInfo.textures.font);
 
 	let numberOfTriangles = wasm.exports.fontShaderGetTrianglesCount();
@@ -136,10 +137,7 @@ export function fontShaderDrawFrame(
 	gl.drawArrays(gl.TRIANGLES, 0, numberOfVertices);
 }
 
-export function fontShaderSetTexture(gl: WebGLRenderingContext, glTargetTexture: string, shaderInfo: FontShaderInfo, image: HTMLImageElement) {
-	// Make shader texture the active texture
-	// Make the target texture the active gl texture
-	gl.activeTexture(gl[glTargetTexture as keyof WebGLRenderingContext] as number);
+export function fontShaderSetTexture(gl: WebGLRenderingContext, shaderInfo: FontShaderInfo, image: HTMLImageElement) {
 	// Bind the font texture to TEXTURE_2D binding point
 	gl.bindTexture(gl.TEXTURE_2D, shaderInfo.textures.font);
 

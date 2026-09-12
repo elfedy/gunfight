@@ -1,12 +1,12 @@
 import { Mat3Utils } from "./math"
 import { colorShaderSetup, ColorShaderInfo } from "./shaders_color";
-import { textureShaderSetup, textureShaderSetTexture, TextureShaderInfo } from "./shaders_texture";
-import { fontShaderSetup, fontShaderDrawFrame, FontShaderInfo, fontShaderSetTexture } from "./shaders_font";
+import { textureShaderSetup, textureShaderSetTexture, TextureShaderInfo, textureShaderFiles } from "./shaders_texture";
+import { fontShaderSetup, fontShaderDrawFrame, FontShaderInfo, fontShaderSetTexture, fontShaderFiles } from "./shaders_font";
 import { WasmExports } from "./exports";
 
 // Global Config
 const GlobalConfig = {
-	debug: false,
+	debug: true,
 };
 
 // NOTE(fede): 1 page = 64 KB
@@ -15,35 +15,32 @@ let wasmMemoryBuffer = new Uint8Array(wasmMemory.buffer);
 
 interface Context {
 	wasm: WebAssembly.WebAssemblyInstantiatedSource | null,
-	images: Array<HTMLImageElement>,
+	images: Map<string, HTMLImageElement>,
 	loadedImages: number,
 }
 
 let context: Context = {
 	wasm: null,
-	images: [],
+	images: new Map(),
 	loadedImages: 0,
 }
 
-const imageUrls = [
-	'sprite_atlas.png',
-	'background.png',
-	'start.png',
-	'game_over.png',
-	'font_atlas.png'
-];
+const allImages = [...fontShaderFiles, ...textureShaderFiles];
 
-imageUrls.forEach((imageUrl, index) => {
-	let image = new Image();
-	image.src = imageUrl;
+allImages.forEach(filename => {
+	DEBUG(`Added ${filename}`)
+	let htmlElem = new Image();
+	htmlElem.src = filename;
 
-	image.onload = () => {
-		context.images[index] = image;
+	htmlElem.onload = () => {
+		DEBUG(`${filename} loaded`);
+		context.images.set(filename, htmlElem);
 		context.loadedImages++;
 		tryInitializeGameLoop();
 	};
 });
 
+// Load audio
 interface AudioSet {
 	audios: Array<HTMLAudioElement>,
 	currentIndex: number,
@@ -103,9 +100,11 @@ WebAssembly.instantiateStreaming(
 });
 
 function tryInitializeGameLoop() {
-	if (context.wasm !== null && context.loadedImages === imageUrls.length) {
+	DEBUG("try initialize game loop");
+	if (context.wasm !== null && context.loadedImages === allImages.length) {
 		initializeGameLoop(context);
 	}
+	DEBUG(`Did not Initialize: ${context}`);
 }
 
 function initializeGameLoop(context: Context) {
@@ -122,17 +121,16 @@ function initializeGameLoop(context: Context) {
 	gl = gl!;
 	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-	// Setup Shaders
+	// Setup Shaders and Textures
 	let colorShaderInfo = colorShaderSetup(gl);
 
 	let textureShaderInfo = textureShaderSetup(gl);
-	textureShaderSetTexture(gl, 'TEXTURE0', textureShaderInfo, context.images[0], 'sprite');
-	textureShaderSetTexture(gl, 'TEXTURE1', textureShaderInfo, context.images[1], 'background');
-	textureShaderSetTexture(gl, 'TEXTURE2', textureShaderInfo, context.images[2], 'start');
-	textureShaderSetTexture(gl, 'TEXTURE3', textureShaderInfo, context.images[3], 'game_over');
+	textureShaderFiles.forEach(filename => {
+		textureShaderSetTexture(gl, textureShaderInfo, context.images.get(filename)!, filename);
+	});
 
 	let fontShaderInfo = fontShaderSetup(gl);
-	fontShaderSetTexture(gl, 'TEXTURE4', fontShaderInfo, context.images[4]);
+	fontShaderSetTexture(gl, fontShaderInfo, context.images.get(fontShaderFiles[0])!);
 
 	// Setup event listeners
 	const processKeyChange = (keyCode: string, isDown: number) => {
