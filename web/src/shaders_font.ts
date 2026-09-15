@@ -132,7 +132,7 @@ export function fontShaderDrawFrame(
 	gl.bufferData(gl.ARRAY_BUFFER, aTexCoordValues, gl.STATIC_DRAW);
 
 	gl.uniformMatrix3fv(fontShaderInfo.locations.uMatrix, false, Mat3Utils.projection(gl.canvas.width, gl.canvas.height));
-	gl.uniform1i(fontShaderInfo.locations.uImage, 2);
+	gl.uniform1i(fontShaderInfo.locations.uImage, 0);
 
 	gl.drawArrays(gl.TRIANGLES, 0, numberOfVertices);
 }

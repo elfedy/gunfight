@@ -15,10 +15,10 @@ export interface TextureShaderInfo {
     uImage: WebGLUniformLocation,
   },
   textures: {
-    sprite: WebGLTexture,
-    background: WebGLTexture,
-    start: WebGLTexture,
-    gameOver: WebGLTexture,
+    "sprite_atlas.png": WebGLTexture,
+    "background.png": WebGLTexture,
+    "start.png": WebGLTexture,
+    "game_over.png": WebGLTexture,
   }
 
 }
@@ -62,10 +62,10 @@ export function textureShaderSetup(gl: WebGLRenderingContext): TextureShaderInfo
       uImage: gl.getUniformLocation(shaderProgram, "uImage")!,
     },
     textures: {
-      sprite: gl.createTexture()!,
-      background: gl.createTexture()!,
-      start: gl.createTexture()!,
-      gameOver: gl.createTexture()!,
+      "sprite_atlas.png": gl.createTexture()!,
+      "background.png": gl.createTexture()!,
+      "start.png": gl.createTexture()!,
+      "game_over.png": gl.createTexture()!,
     }
   };
 

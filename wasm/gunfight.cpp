@@ -233,7 +233,7 @@ extern "C" export void updateAndRender(f64 timestamp) {
     globalGameState.enemiesCurrentCount = 0;
     globalGameState.enemyNextSpawn = (timestamp + seconds(2));
 
-    globalGameState.intro = true;
+    globalGameState.intro = false;
     globalGameState.gameOver = false;
 
     globalLastTimestamp = timestamp;

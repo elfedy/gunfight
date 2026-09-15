@@ -6,7 +6,7 @@ import { WasmExports } from "./exports";
 
 // Global Config
 const GlobalConfig = {
-	debug: true,
+	debug: false,
 };
 
 // NOTE(fede): 1 page = 64 KB
@@ -203,6 +203,9 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 			0, // stride: bytes between beggining of consecutive vetex attributes in buffer
 			0 // offset: where to start reading data from the buffer
 		);
+
+		// Use background texture
+		gl.bindTexture(gl.TEXTURE_2D, textureShaderInfo.textures["background.png"])
 		// Add vertices to array buffer
 		let backgroundAPositions = new Float32Array([
 			0, 0,
@@ -239,7 +242,7 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 		// Set projection matrix data
 		gl.uniformMatrix3fv(textureShaderInfo.locations.uMatrix, false, matrixProjection);
 
-		gl.uniform1i(textureShaderInfo.locations.uImage, 1);
+		gl.uniform1i(textureShaderInfo.locations.uImage, 0);
 
 		gl.drawArrays(gl.TRIANGLES, 0, 6);
 
@@ -309,6 +312,9 @@ function run(wasm: WebAssembly.Instance & { exports: WasmExports }, gl: WebGLRen
 
 		let textureShaderNumberOfTriangles = wasm.exports.textureShaderGetTrianglesCount();
 		let textureShaderNumberOfVertices = textureShaderNumberOfTriangles * 3;
+
+		// Use sprite texture
+		gl.bindTexture(gl.TEXTURE_2D, textureShaderInfo.textures["sprite_atlas.png"]);
 
 		// Provide position coordinates
 		gl.bindBuffer(gl.ARRAY_BUFFER, textureShaderInfo.buffers.aPosition);
